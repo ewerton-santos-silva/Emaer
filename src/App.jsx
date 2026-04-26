@@ -55,10 +55,11 @@ export default function App() {
   const [activePage, setActivePage] = useState('dashboard');
   const [pageKey, setPageKey] = useState(0);
   const [projects, setProjects] = useState(pipelineProjetosData);
+  const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
 
   const navigate = (page) => {
     setActivePage(page);
-    setPageKey((k) => k + 1); // force re-mount → triggers CSS animation
+    setPageKey((k) => k + 1);
   };
 
   const updateProjects = (newProjects) => {
@@ -73,25 +74,25 @@ export default function App() {
       <Sidebar activePage={activePage} onNavigate={navigate} />
 
       <div className="main-content">
-        {/* Page Header */}
         <div className="page-header">
           <div className="page-header-left">
             <h1>{config.title}</h1>
             <p>{config.sub}</p>
           </div>
           {config.showNewProject && (
-            <button className="btn-primary" onClick={() => alert('Abrir formulário de novo projeto...')}>
+            <button className="btn-primary" onClick={() => setIsNewProjectModalOpen(true)}>
               + Novo Projeto
             </button>
           )}
         </div>
 
-        {/* Page Body */}
         <div className="page-body" key={pageKey}>
           <PageComponent 
             onNavigate={navigate} 
             projects={projects} 
             setProjects={updateProjects}
+            externalModalOpen={isNewProjectModalOpen}
+            setExternalModalOpen={setIsNewProjectModalOpen}
           />
         </div>
       </div>
