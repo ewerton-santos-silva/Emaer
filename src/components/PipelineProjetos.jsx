@@ -47,6 +47,15 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
     setFormData(initialForm);
   };
 
+  const moveCard = (cardId, fromCol, toCol) => {
+    const next = { ...projects };
+    const card = next[fromCol].find(p => p.id === cardId);
+    if (!card) return;
+    next[fromCol] = next[fromCol].filter(p => p.id !== cardId);
+    next[toCol] = [...(next[toCol] || []), { ...card, status: toCol }];
+    setProjects(next);
+  };
+
   return (
     <>
       {isModalOpen && (
@@ -75,68 +84,11 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
                   <button className="btn-primary" style={{ padding: '8px 12px', background: '#331111' }} onClick={() => alert('Abrir cadastro de novo cliente...')}>+ Novo</button>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'flex-end' }}>
-                  <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
-                    <label className="form-label">ARQUITETO DO PROJETO</label>
-                    <select className="form-control" value={formData.arquiteto} onChange={(e)=>setFormData({...formData, arquiteto: e.target.value})}>
-                      <option value="">─ nenhum ─</option>
-                      <option value="Arq X">Arq X</option>
-                    </select>
-                  </div>
-                  <button className="btn-primary" style={{ padding: '8px 12px', background: '#331111' }} onClick={() => alert('Abrir cadastro de novo arquiteto...')}>+ Novo</button>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">TIPO DE PROJETO</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    {['Estrutural', 'Elétrico', 'Hidrossanitário', 'Laudo', 'Outro'].map(t => (
-                      <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                        <input type="checkbox" checked={formData.tipos.includes(t)} onChange={(e) => {
-                          const n = e.target.checked ? [...formData.tipos, t] : formData.tipos.filter(x => x !== t);
-                          setFormData({...formData, tipos: n});
-                        }} /> {t}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="form-group">
                   <label className="form-label">ETAPA INICIAL</label>
                   <select className="form-control" value={formData.etapa} onChange={(e)=>setFormData({...formData, etapa: e.target.value})}>
                     {Object.keys(colConfigs).map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-                  <div className="form-group">
-                    <label className="form-label">VALOR DA PROPOSTA (R$)</label>
-                    <input type="number" className="form-control" value={formData.valor} onChange={(e)=>setFormData({...formData, valor: Number(e.target.value)})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">ARQUIVO</label>
-                    <select className="form-control" value={formData.arquivo} onChange={(e)=>setFormData({...formData, arquivo: e.target.value})}>
-                      <option>Aguardando</option>
-                      <option>Recebido</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">ORIGEM</label>
-                  <select className="form-control" value={formData.origem} onChange={(e)=>setFormData({...formData, origem: e.target.value})}>
-                    <option>Parceiro</option>
-                    <option>Google</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">PRÓXIMA AÇÃO</label>
-                  <input type="date" className="form-control" value={formData.proximaAcao} onChange={(e)=>setFormData({...formData, proximaAcao: e.target.value})} />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">OBSERVAÇÕES</label>
-                  <textarea className="form-control" rows="3" value={formData.observacoes} onChange={(e)=>setFormData({...formData, observacoes: e.target.value})} />
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
@@ -166,6 +118,22 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
                   <div className="kanban-card-title">{card.nome}</div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--emaer-azul-principal)' }}>{formatCurrency(card.valor)}</div>
                   <div style={{ fontSize: 11, color: '#888', marginTop: 8 }}>📅 {card.data}</div>
+                  
+                  {/* Movement Buttons */}
+                  <div style={{ marginTop: 12, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                    {Object.keys(colConfigs).map(tCol => (
+                      tCol !== col && (
+                        <button 
+                          key={tCol}
+                          onClick={() => moveCard(card.id, col, tCol)}
+                          style={{ fontSize: 10, padding: '2px 6px', border: '1px solid #ddd', borderRadius: 4, cursor: 'pointer', background: '#fff' }}
+                          title={`Mover para ${tCol}`}
+                        >
+                          {colConfigs[tCol].icon}
+                        </button>
+                      )
+                    ))}
+                  </div>
                 </div>
               ))}
               <button className="btn-secondary" style={{ width: '100%', borderStyle: 'dashed' }} onClick={() => {
