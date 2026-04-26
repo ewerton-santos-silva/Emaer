@@ -1,128 +1,95 @@
 import { useState } from 'react';
-import { pipelineParceirosData } from '../data/mockData';
 import { formatCurrency } from './ui/Shared';
 import Modal from './ui/Modal';
 
+const initialParceiros = [
+  { id: 1, nome: 'Manuela Arquiteta', especialidade: 'Arquitetura Residencial', contato: '(81) 98877-6655', status: 'Ativo', valorPotencial: 45000, origem: 'Instagram' },
+  { id: 2, nome: 'Pedro Estrutural', especialidade: 'Projetos Complementares', contato: '(81) 97766-5544', status: 'Prospecção', valorPotencial: 12000, origem: 'Indicação' },
+  { id: 3, nome: 'Construtora Silva', especialidade: 'Execução de Obras', contato: '(81) 96655-4433', status: 'Parceiro Estratégico', valorPotencial: 150000, origem: 'Google' },
+];
+
 export default function PipelineParceiros() {
-  const [colunas, setColunas] = useState(pipelineParceirosData);
-  const [dragging, setDragging] = useState(null);
-  const [dragOver, setDragOver] = useState(null);
+  const [parceiros, setParceiros] = useState(initialParceiros);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCard, setEditingCard] = useState(null);
-  const [activeCol, setActiveCol] = useState('Prospecção');
+  const [editingItem, setEditingItem] = useState(null);
 
   const fields = [
     { name: 'nome', label: 'Nome do Parceiro', type: 'text' },
-    { name: 'tipo', label: 'Tipo de Empresa', type: 'text' },
+    { name: 'especialidade', label: 'Especialidade', type: 'text' },
+    { name: 'contato', label: 'Contato', type: 'text' },
+    { name: 'status', label: 'Status', type: 'select', options: [
+      { value: 'Prospecção', label: 'Prospecção' },
+      { value: 'Ativo', label: 'Ativo' },
+      { value: 'Parceiro Estratégico', label: 'Parceiro Estratégico' },
+      { value: 'Inativo', label: 'Inativo' },
+    ]},
     { name: 'valorPotencial', label: 'Valor Potencial (R$)', type: 'number' },
+    { name: 'origem', label: 'Origem', type: 'text' },
   ];
 
-  const handleDragStart = (card, colOrigem) => setDragging({ card, colOrigem });
-
-  const handleDrop = (colDestino) => {
-    if (!dragging || dragging.colOrigem === colDestino) { setDragging(null); return; }
-    setColunas(prev => {
-      const next = {};
-      Object.entries(prev).forEach(([col, cards]) => {
-        if (col === dragging.colOrigem) next[col] = cards.filter(c => c.id !== dragging.card.id);
-        else if (col === colDestino)   next[col] = [...cards, dragging.card];
-        else                           next[col] = cards;
-      });
-      return next;
-    });
-    setDragging(null);
-    setDragOver(null);
-  };
-
-  const handleDelete = (id, col, e) => {
-    e.stopPropagation();
-    setColunas(prev => ({ ...prev, [col]: prev[col].filter(c => c.id !== id) }));
-  };
-
   const handleSave = (formData) => {
-    const valorNum = parseFloat(formData.valorPotencial);
-    if (editingCard) {
-      setColunas(prev => {
-        const next = { ...prev };
-        const col = editingCard.col;
-        next[col] = next[col].map(c => c.id === editingCard.id ? { ...c, ...formData, valorPotencial: valorNum } : c);
-        return next;
-      });
+    if (editingItem) {
+      setParceiros(prev => prev.map(p => p.id === editingItem.id ? { ...p, ...formData } : p));
     } else {
-      const novo = {
-        id: Date.now(),
-        ...formData,
-        valorPotencial: valorNum
-      };
-      setColunas(prev => ({ ...prev, [activeCol]: [...prev[activeCol], novo] }));
+      setParceiros([...parceiros, { id: Date.now(), ...formData }]);
     }
   };
 
-  const openAdd = (col) => {
-    setActiveCol(col);
-    setEditingCard(null);
-    setIsModalOpen(true);
-  };
-
-  const openEdit = (card, col) => {
-    setEditingCard({ ...card, col });
-    setIsModalOpen(true);
-  };
+  const openAdd = () => { setEditingItem(null); setIsModalOpen(true); };
+  const openEdit = (p) => { setEditingItem(p); setIsModalOpen(true); };
 
   return (
-    <div className="kanban-board">
+    <div className="card">
       <Modal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSave}
-        title={editingCard ? 'Editar Parceiro' : `Novo Parceiro - ${activeCol}`}
-        initialData={editingCard}
+        title={editingItem ? 'Editar Parceiro' : 'Novo Parceiro'}
+        initialData={editingItem}
         fields={fields}
       />
-      {Object.entries(colunas).map(([col, cards]) => (
-        <div key={col} className="kanban-col"
-          onDragOver={e => { e.preventDefault(); setDragOver(col); }}
-          onDrop={() => handleDrop(col)}
-          style={{
-            outline: dragOver === col && dragging?.colOrigem !== col ? '2px dashed #EF9F27' : 'none',
-            borderRadius: 12
-          }}
-        >
-          <div className="kanban-col-header">
-            {col}
-            <span className="kanban-col-count">{cards.length}</span>
-          </div>
-          <div className="kanban-cards">
-            {cards.map((card) => (
-              <div key={card.id} className="kanban-card" draggable
-                onDragStart={() => handleDragStart(card, col)}
-                onClick={() => openEdit(card, col)}
-                style={{ opacity: dragging?.card.id === card.id ? 0.4 : 1, cursor: 'grab' }}
-              >
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                  <span style={{ fontSize:11, color:'#85B7EB', userSelect:'none' }}>⠿ arrastar</span>
-                  <button onClick={(e) => handleDelete(card.id, col, e)}
-                    style={{ background:'rgba(239,159,39,0.12)', border:'none', borderRadius:'50%',
-                      width:22, height:22, cursor:'pointer', color:'#EF9F27', fontWeight:700, fontSize:13,
-                      display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
-                </div>
-
-                <div className="kanban-card-title">{card.nome}</div>
-                <div className="kanban-card-meta" style={{ marginBottom:10 }}>
-                  <span>🏢</span><span>{card.tipo}</span>
-                </div>
-                <div style={{ background:'#EBF3FB', borderRadius:8, padding:'6px 10px', fontSize:13, fontWeight:700, color:'#185FA5' }}>
-                  💼 {formatCurrency(card.valorPotencial)}
-                </div>
-              </div>
-            ))}
-
-            <button className="btn-secondary" style={{ width:'100%', borderStyle:'dashed', padding:'10px', marginTop:10 }} onClick={() => openAdd(col)}>
-              + Adicionar Parceiro
-            </button>
-          </div>
+      <div className="card-body">
+        <div className="section-header" style={{ marginBottom: 20 }}>
+          <div className="section-title" style={{ color: 'var(--emaer-azul-principal)' }}>Planilha de Prospecção de Parceiros</div>
+          <button className="btn-primary" onClick={openAdd}>+ Novo Parceiro</button>
         </div>
-      ))}
+
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome do Parceiro</th>
+                <th>Especialidade</th>
+                <th>Contato</th>
+                <th>Status</th>
+                <th>Valor Potencial</th>
+                <th>Origem</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {parceiros.map(p => (
+                <tr key={p.id}>
+                  <td style={{ fontWeight: 600, color: 'var(--emaer-azul-principal)' }}>{p.nome}</td>
+                  <td>{p.especialidade}</td>
+                  <td style={{ fontSize: 13 }}>{p.contato}</td>
+                  <td>
+                    <span className="badge" style={{ 
+                      background: p.status === 'Ativo' ? 'var(--emaer-verde-light)' : 'var(--emaer-ambar-light)',
+                      color: p.status === 'Ativo' ? 'var(--emaer-verde)' : 'var(--emaer-ambar)'
+                    }}>{p.status}</span>
+                  </td>
+                  <td style={{ fontWeight: 700 }}>{formatCurrency(p.valorPotencial)}</td>
+                  <td style={{ fontSize: 12, color: 'var(--emaer-azul-claro)' }}>{p.origem}</td>
+                  <td>
+                    <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => openEdit(p)}>Editar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

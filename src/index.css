@@ -7,17 +7,16 @@
 }
 
 :root {
-  --emaer-bg: #0f0f0f;
-  --emaer-card: #1a1a1a;
-  --emaer-border: rgba(255, 255, 255, 0.08);
-  --emaer-red: #d32f2f;
-  --emaer-cyan: #00bcd4;
-  --emaer-green: #4caf50;
-  --emaer-yellow: #ffeb3b;
-  --emaer-purple: #9c27b0;
-  --emaer-pink: #e91e63;
-  --emaer-text: #e0e0e0;
-  --emaer-text-dim: #909090;
+  --emaer-azul-principal: #0C447C;
+  --emaer-azul-medio: #185FA5;
+  --emaer-azul-claro: #85B7EB;
+  --emaer-ambar: #EF9F27;
+  --emaer-grafite: #444441;
+  --emaer-offwhite: #F1EFE8;
+  --emaer-verde: #2E9E5B;
+  --emaer-verde-light: #E6F7EE;
+  --emaer-ambar-light: #FFF8EC;
+  --emaer-azul-light: #EBF3FB;
   --sidebar-width: 260px;
   --sidebar-collapsed: 70px;
   --transition: 200ms ease;
@@ -26,8 +25,8 @@
 html, body, #root {
   height: 100%;
   font-family: 'Inter', sans-serif;
-  color: var(--emaer-text);
-  background: var(--emaer-bg);
+  color: var(--emaer-grafite);
+  background: var(--emaer-offwhite);
 }
 
 /* Scrollbar */
@@ -46,14 +45,13 @@ html, body, #root {
 /* ======================== SIDEBAR ======================== */
 .sidebar {
   width: var(--sidebar-width);
-  background: #000;
+  background: var(--emaer-azul-principal);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   transition: width var(--transition);
   overflow: hidden;
   z-index: 100;
-  border-right: 1px solid var(--emaer-border);
 }
 
 .sidebar.collapsed {
@@ -76,7 +74,7 @@ html, body, #root {
 .sidebar-logo .logo-sub {
   font-size: 10px;
   font-weight: 600;
-  color: var(--emaer-red);
+  color: var(--emaer-ambar);
   letter-spacing: 4px;
   text-transform: uppercase;
   margin-top: 2px;
@@ -122,7 +120,7 @@ html, body, #root {
 .nav-section-label {
   font-size: 9px;
   font-weight: 700;
-  color: var(--emaer-text-dim);
+  color: var(--emaer-azul-claro);
   letter-spacing: 2px;
   text-transform: uppercase;
   padding: 14px 20px 6px;
@@ -157,9 +155,9 @@ html, body, #root {
 }
 
 .nav-item.active {
-  background: rgba(211, 47, 47, 0.1);
+  background: rgba(239, 159, 39, 0.12);
   color: #fff;
-  border-left-color: var(--emaer-red);
+  border-left-color: var(--emaer-ambar);
   font-weight: 600;
 }
 
@@ -186,30 +184,29 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--emaer-bg);
+  background: var(--emaer-offwhite);
 }
 
 .page-header {
-  background: #000;
-  border-bottom: 1px solid var(--emaer-border);
+  background: #fff;
+  border-bottom: 1px solid rgba(12,68,124,0.08);
   padding: 18px 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(12,68,124,0.06);
 }
 
 .page-header-left h1 {
   font-size: 22px;
   font-weight: 700;
-  color: var(--emaer-red);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  color: var(--emaer-azul-principal);
 }
 
 .page-header-left p {
   font-size: 13px;
-  color: var(--emaer-text-dim);
+  color: var(--emaer-azul-claro);
   margin-top: 2px;
 }
 
@@ -227,7 +224,7 @@ html, body, #root {
 
 /* ======================== BUTTONS ======================== */
 .btn-primary {
-  background: var(--emaer-red);
+  background: var(--emaer-azul-medio);
   color: #fff;
   border: none;
   padding: 9px 20px;
@@ -270,9 +267,9 @@ html, body, #root {
 
 /* ======================== CARDS ======================== */
 .card {
-  background: var(--emaer-card);
+  background: #fff;
   border-radius: 12px;
-  border: 1px solid var(--emaer-border);
+  box-shadow: 0 2px 8px rgba(12,68,124,0.07);
   overflow: hidden;
 }
 
@@ -513,18 +510,19 @@ table tbody tr:hover {
 .form-control {
   width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid var(--emaer-border);
+  border: 1.5px solid rgba(12,68,124,0.15);
   border-radius: 8px;
   font-size: 14px;
-  color: #fff;
-  background: rgba(255,255,255,0.05);
+  color: var(--emaer-grafite);
+  background: #fff;
   font-family: inherit;
   transition: border-color var(--transition);
   outline: none;
 }
 
 .form-control:focus {
-  border-color: var(--emaer-red);
+  border-color: var(--emaer-azul-medio);
+  box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
 }
 
 /* ======================== RESPONSIVE ======================== */
