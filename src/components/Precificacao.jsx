@@ -47,10 +47,9 @@ export default function Precificacao({ projects, setProjects }) {
 
   // -- METODO 2: HORA TRABALHADA --
   const [equipe, setEquipe] = useState([{ id: 1, cargo: 'Engenheiro', horasMes: 160, salario: 15000, cFixo: 0 }]);
-  const [custosFixos, setCustosFixos] = useState([{ id: 1, item: 'Aluguel', valor: 1500 }]);
+  const [custosFixos, setCustosFixos] = useState([{ id: 1, item: 'Aluguel', valor: 1500 }, { id: 2, item: 'Luz', valor: 300 }]);
   const [horasBaseFixo, setHorasBaseFixo] = useState(160);
-  const [levantamentos, setLevantamentos] = useState([{ id: 1, etapa: 'Reunião de briefing', responsavelId: '', horas: 0 }]);
-  const [projetoEstrutural, setProjetoEstrutural] = useState([{ id: 1, etapa: 'Concepção', responsavelId: '', horas: 0 }]);
+  const [levantamentos, setLevantamentos] = useState([{ id: 1, etapa: 'Concepção', responsavelId: '1', horas: 0 }]);
   const [margemLucro, setMargemLucro] = useState(30);
   const [tributacao, setTributacao] = useState(11);
   const [valorEditado, setValorEditado] = useState(0);
@@ -68,21 +67,22 @@ export default function Precificacao({ projects, setProjects }) {
   }, [regiao, tipoObra]);
 
   const complexidadeExtraPct = fatoresComplexidade.filter(f => f.checked).reduce((acc, f) => acc + f.pct, 0);
-  const valorFinalMetodo1 = area * (meuPrecoM2 || refMercado) * (1 + complexidadeExtraPct / 100) * (1 / (repeticao || 1));
+  const valorMetodo1 = area * (meuPrecoM2 || refMercado) * (1 + complexidadeExtraPct / 100) * (1 / (repeticao || 1));
 
   // Metodo 2 Calculations
   const calcValorHoraMembro = (m) => (m.salario * (1 + m.cFixo/100)) / m.horasMes;
   const totalFixosMensal = custosFixos.reduce((a, b) => a + b.valor, 0);
   const custoFixoHoraEscritorio = totalFixosMensal / horasBaseFixo;
-  const totalHorasProjeto = [...levantamentos, ...projetoEstrutural].reduce((a, b) => a + b.horas, 0);
-  const custoEquipe = [...levantamentos, ...projetoEstrutural].reduce((acc, curr) => {
+  const totalHorasProjeto = levantamentos.reduce((a, b) => a + b.horas, 0);
+  const custoEquipe = levantamentos.reduce((acc, curr) => {
     const membro = equipe.find(m => m.id === Number(curr.responsavelId));
     return acc + (curr.horas * (membro ? calcValorHoraMembro(membro) : 0));
   }, 0);
   const subtotalCustos = custoEquipe + (totalHorasProjeto * custoFixoHoraEscritorio);
-  const valorFinalMetodo2 = subtotalCustos / (1 - (margemLucro + tributacao) / 100);
+  const valorMetodo2Auto = subtotalCustos / (1 - (margemLucro + tributacao) / 100);
+  const valorMetodo2 = valorEditado > 0 ? valorEditado : valorMetodo2Auto;
 
-  const valorFinal = activeTab === 'complexidade' ? valorFinalMetodo1 : (valorEditado > 0 ? valorEditado : valorFinalMetodo2);
+  const valorFinal = activeTab === 'complexidade' ? valorMetodo1 : (activeTab === 'hora_trabalhada' ? valorMetodo2 : Math.max(valorMetodo1, valorMetodo2));
 
   const handleAprovar = () => {
     if (!selectedProject) return;
@@ -114,7 +114,7 @@ export default function Precificacao({ projects, setProjects }) {
 
       <div className="card">
         <div className="card-body">
-          {activeTab === 'complexidade' ? (
+          {activeTab === 'complexidade' && (
             <div style={{ display: 'grid', gap: 25 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 15 }}>
                 <div className="form-group"><label className="form-label">REGIÃO</label>
@@ -127,7 +127,6 @@ export default function Precificacao({ projects, setProjects }) {
                 <div className="form-group"><label className="form-label">REPETIÇÃO</label><input type="number" className="form-control" value={repeticao} onChange={(e)=>setRepeticao(Number(e.target.value))} /></div>
                 <div className="form-group"><label className="form-label">MEU PREÇO</label><input type="number" className="form-control" value={meuPrecoM2} onChange={(e)=>setMeuPrecoM2(Number(e.target.value))} /></div>
               </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
                 {fatoresComplexidade.map((f, i) => (
                   <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: '#f9f9f9', borderRadius: 8, alignItems: 'center' }}>
@@ -140,20 +139,73 @@ export default function Precificacao({ projects, setProjects }) {
                   </div>
                 ))}
               </div>
-
-              <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div>
-                  <div style={{ fontSize: 11, color: '#999' }}>VALOR TOTAL ESTIMADO (MÉTODO 1)</div>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--emaer-azul-principal)' }}>{fmt(valorFinalMetodo1)}</div>
-                </div>
-                <button className="btn-primary" style={{ padding: '12px 30px' }} onClick={handleAprovar} disabled={!selectedProjectId}>APROVAR E ENVIAR</button>
-              </div>
-            </div>
-          ) : (
-            <div style={{ fontSize: 14, color: '#666', textAlign: 'center', padding: 40 }}>
-              Conteúdo da aba {activeTab.replace('_', ' ')} configurado conforme imagens anteriores.
             </div>
           )}
+
+          {activeTab === 'hora_trabalhada' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.8fr', gap: 20 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div className="card" style={{ background: '#fcfcfc' }}><div className="card-body">
+                  <h4 style={{ fontSize: 12, marginBottom: 15 }}>CRONOGRAMA DE HORAS</h4>
+                  <table style={{ width: '100%' }}>
+                    <thead><tr><th>Etapa</th><th>Responsável</th><th>Horas</th></tr></thead>
+                    <tbody>
+                      {levantamentos.map((l, i) => (
+                        <tr key={l.id}>
+                          <td><input className="form-control" value={l.etapa} onChange={(e)=>{const n=[...levantamentos]; n[i].etapa=e.target.value; setLevantamentos(n)}} /></td>
+                          <td><select className="form-control" value={l.responsavelId} onChange={(e)=>{const n=[...levantamentos]; n[i].responsavelId=e.target.value; setLevantamentos(n)}}>
+                            {equipe.map(m => <option key={m.id} value={m.id}>{m.cargo}</option>)}
+                          </select></td>
+                          <td><input type="number" className="form-control" value={l.horas} onChange={(e)=>{const n=[...levantamentos]; n[i].horas=Number(e.target.value); setLevantamentos(n)}} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <button className="btn-secondary" style={{ marginTop: 10, fontSize: 11 }} onClick={()=>setLevantamentos([...levantamentos, {id:Date.now(), etapa:'', responsavelId:'1', horas:0}])}>+ Adicionar etapa</button>
+                </div></div>
+              </div>
+              <div className="card" style={{ background: '#f5f5f5' }}><div className="card-body">
+                <h4 style={{ fontSize: 12, marginBottom: 15 }}>RESUMO FINANCEIRO</h4>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between' }}><span>Custo Direto</span><span>{fmt(custoEquipe)}</span></div>
+                  <div style={{ display:'flex', justifyContent:'space-between' }}><span>Custo Indireto</span><span>{fmt(totalHorasProjeto * custoFixoHoraEscritorio)}</span></div>
+                  <div style={{ display:'flex', justifyContent:'space-between', fontWeight: 800, borderTop: '1px solid #ddd', paddingTop: 10 }}>
+                    <span>Subtotal</span><span>{fmt(subtotalCustos)}</span>
+                  </div>
+                  <div style={{ marginTop: 15, padding: 15, background: '#fff', borderRadius: 8, textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: '#999' }}>VALOR FINAL MÉTODO 2</div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: '#d32f2f' }}>{fmt(valorMetodo2)}</div>
+                  </div>
+                </div>
+              </div></div>
+            </div>
+          )}
+
+          {activeTab === 'comparativo' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 30, padding: 20 }}>
+              <div style={{ padding: 25, background: '#e3f2fd', borderRadius: 15, textAlign: 'center' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--emaer-azul-principal)', marginBottom: 10 }}>MÉTODO 1: COMPLEXIDADE</div>
+                <div style={{ fontSize: 36, fontWeight: 900, color: 'var(--emaer-azul-principal)' }}>{fmt(valorMetodo1)}</div>
+                <div style={{ fontSize: 11, color: '#666', marginTop: 10 }}>Baseado em m² e fatores técnicos</div>
+              </div>
+              <div style={{ padding: 25, background: '#f1f8e9', borderRadius: 15, textAlign: 'center' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--emaer-verde)', marginBottom: 10 }}>MÉTODO 2: HORAS TRABALHADAS</div>
+                <div style={{ fontSize: 36, fontWeight: 900, color: 'var(--emaer-verde)' }}>{fmt(valorMetodo2)}</div>
+                <div style={{ fontSize: 11, color: '#666', marginTop: 10 }}>Baseado em equipe e custos operacionais</div>
+              </div>
+              <div style={{ gridColumn: 'span 2', textAlign: 'center', marginTop: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#333' }}>Sugestão de Valor para Proposta: <span style={{ color: 'var(--emaer-ambar)', fontSize: 24 }}>{fmt(Math.max(valorMetodo1, valorMetodo2))}</span></div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop: 30, paddingTop: 20, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div>
+              <div style={{ fontSize: 11, color: '#999' }}>VALOR FINAL SELECIONADO</div>
+              <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--emaer-azul-principal)' }}>{fmt(valorFinal)}</div>
+            </div>
+            <button className="btn-primary" style={{ padding: '12px 30px' }} onClick={handleAprovar} disabled={!selectedProjectId}>APROVAR E ENVIAR AO PIPELINE</button>
+          </div>
         </div>
       </div>
     </div>
