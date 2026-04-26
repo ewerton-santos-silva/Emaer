@@ -51,19 +51,30 @@ const pageComponents = {
 
 import { pipelineProjetosData } from './data/mockData';
 
+const initialParceirosData = {
+  'PROSPECÇÃO': [
+    { id: 1, nome: 'Igor Cabral', profissao: 'Arquiteto', instagram: '@igorcabral', local: 'Recife/PE', proximaAcao: 'Entrar em contato', dataAcao: '2026-04-28' },
+    { id: 2, nome: 'Pedro Silva', profissao: 'Engenheiro', instagram: '@pedro.eng', local: 'Olinda/PE', proximaAcao: 'Enviar proposta', dataAcao: '2026-04-29' },
+  ],
+  'CONTATADO': [
+    { id: 3, nome: 'Manuela arq', profissao: 'Arquiteto', instagram: '@manuela.arq', local: 'Jaboatão/PE', proximaAcao: 'Agendar reunião', dataAcao: '2026-04-30' },
+  ],
+  'REUNIÃO': [],
+  'PARCERIA FIRMADA': [],
+  'INATIVO': [],
+};
+
 export default function App() {
   const [activePage, setActivePage] = useState('dashboard');
   const [pageKey, setPageKey] = useState(0);
   const [projects, setProjects] = useState(pipelineProjetosData);
+  const [parceirosData, setParceirosData] = useState(initialParceirosData);
+  const [clients, setClients] = useState([{ id: 1, nome: 'Cliente Exemplo' }]);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
 
   const navigate = (page) => {
     setActivePage(page);
     setPageKey((k) => k + 1);
-  };
-
-  const updateProjects = (newProjects) => {
-    setProjects(newProjects);
   };
 
   const config = pageConfig[activePage] || pageConfig['dashboard'];
@@ -90,7 +101,11 @@ export default function App() {
           <PageComponent 
             onNavigate={navigate} 
             projects={projects} 
-            setProjects={updateProjects}
+            setProjects={setProjects}
+            parceirosData={parceirosData}
+            setParceirosData={setParceirosData}
+            clients={clients}
+            setClients={setClients}
             externalModalOpen={isNewProjectModalOpen}
             setExternalModalOpen={setIsNewProjectModalOpen}
           />
