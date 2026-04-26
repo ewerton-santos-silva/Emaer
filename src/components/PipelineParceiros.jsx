@@ -1,9 +1,6 @@
 import { useState } from 'react';
+import { formatCurrency } from './ui/Shared';
 import Modal from './ui/Modal';
-
-const profissoes = [
-  'Arquiteto', 'Engenheiro', 'Construtora/Incorporadora', 'Mestre de Obra', 'Empreiteiro', 'Outros'
-];
 
 const initialParceiros = [
   { 
@@ -22,11 +19,8 @@ const initialParceiros = [
 
 export default function PipelineParceiros() {
   const [parceiros, setParceiros] = useState(initialParceiros);
-  const [filterProfissao, setFilterProfissao] = useState('Todas');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-
-  const filtered = parceiros.filter(p => filterProfissao === 'Todas' || p.profissao === filterProfissao);
 
   const handleSave = (formData) => {
     if (editingItem) setParceiros(prev => prev.map(p => p.id === editingItem.id ? { ...p, ...formData } : p));
@@ -35,55 +29,61 @@ export default function PipelineParceiros() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Filters & Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--emaer-azul-claro)' }}>FILTRAR PROFISSÃO:</label>
-          <select 
-            className="form-control" style={{ width: 220 }}
-            value={filterProfissao} onChange={(e) => setFilterProfissao(e.target.value)}
-          >
-            <option value="Todas">Todas as Profissões</option>
-            {profissoes.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
+    <div className="card">
+      <div className="card-body">
+        <div style={{ background: 'var(--emaer-red, #d32f2f)', color: '#fff', padding: '10px 20px', textAlign: 'center', fontWeight: 800, fontSize: 16, textTransform: 'uppercase', marginBottom: 20 }}>
+          PROSPECÇÃO ATIVA
         </div>
-        <button className="btn-primary" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>+ Novo Parceiro</button>
-      </div>
 
-      {/* Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
-        {filtered.map(p => (
-          <div key={p.id} className="card" style={{ borderTop: `4px solid ${p.prioridade === 'Alta' ? '#ff4444' : 'var(--emaer-azul-medio)'}` }}>
-            <div className="card-body" style={{ padding: 18 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--emaer-azul-principal)' }}>{p.nome}</div>
-                <span className="badge" style={{ background: 'var(--emaer-azul-light)', color: 'var(--emaer-azul-medio)' }}>{p.etapa}</span>
-              </div>
+        <div className="section-header" style={{ marginBottom: 20 }}>
+          <div className="section-title">Parceiros em Prospecção</div>
+          <button className="btn-primary" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>+ Novo Parceiro</button>
+        </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12, color: '#666' }}>
-                <div><strong>Profissão:</strong> {p.profissao}</div>
-                <div><strong>Origem:</strong> {p.origem}</div>
-                <div><strong>Instagram:</strong> {p.instagram}</div>
-                <div><strong>Seguidores:</strong> {p.seguidores}</div>
-                <div><strong>Local:</strong> {p.cidade}</div>
-                <div><strong>WhatsApp:</strong> {p.telefone}</div>
-              </div>
-
-              <div style={{ marginTop: 15, padding: 10, background: '#f5f5f5', borderRadius: 8, fontSize: 12 }}>
-                <strong>Observações:</strong> {p.obs}
-              </div>
-
-              <div style={{ marginTop: 15, display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#999', borderTop: '1px solid #eee', paddingTop: 10 }}>
-                <div>Último: {p.dataUltimo}</div>
-                <div style={{ color: 'var(--emaer-ambar)', fontWeight: 700 }}>Próxima: {p.proxima}</div>
-              </div>
-
-              <button className="btn-secondary" style={{ width: '100%', marginTop: 15, fontSize: 12, padding: '6px' }}
-                onClick={() => { setEditingItem(p); setIsModalOpen(true); }}>Editar Detalhes</button>
-            </div>
-          </div>
-        ))}
+        <div className="table-container" style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', minWidth: 1200 }}>
+            <thead>
+              <tr style={{ background: '#f5f5f5' }}>
+                <th>Nome do Contato</th>
+                <th>Origem</th>
+                <th>Profissão</th>
+                <th>@ Instagram</th>
+                <th>Seguidores</th>
+                <th>Obs. Lead</th>
+                <th>Cidade/Estado</th>
+                <th>Telefone/WA</th>
+                <th>Etapa Atual</th>
+                <th>Prioridade</th>
+                <th>Próxima Ação</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {parceiros.map(p => (
+                <tr key={p.id}>
+                  <td style={{ fontWeight: 600 }}>{p.nome}</td>
+                  <td>{p.origem}</td>
+                  <td>{p.profissao}</td>
+                  <td style={{ color: 'var(--emaer-azul-claro)' }}>{p.instagram}</td>
+                  <td>{p.seguidores}</td>
+                  <td style={{ fontSize: 11, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.obs}</td>
+                  <td>{p.cidade}</td>
+                  <td style={{ fontSize: 11 }}>{p.telefone}</td>
+                  <td>
+                    <span style={{ background: '#fff9c4', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>{p.etapa}</span>
+                  </td>
+                  <td>
+                    <span style={{ background: p.prioridade === 'Alta' ? '#ffebee' : '#f5f5f5', color: p.prioridade === 'Alta' ? '#d32f2f' : '#666', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>{p.prioridade}</span>
+                  </td>
+                  <td style={{ color: 'var(--emaer-ambar)', fontWeight: 700 }}>{p.proxima}</td>
+                  <td>
+                    <button className="btn-secondary" style={{ padding: '2px 6px', fontSize: 10 }} onClick={() => { setEditingItem(p); setIsModalOpen(true); }}>Editar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {isModalOpen && (
@@ -95,15 +95,16 @@ export default function PipelineParceiros() {
           initialData={editingItem}
           fields={[
             { name: 'nome', label: 'Nome do Contato', type: 'text' },
-            { name: 'profissao', label: 'Profissão', type: 'select', options: profissoes.map(p => ({ value: p, label: p })) },
+            { name: 'profissao', label: 'Profissão', type: 'text' },
             { name: 'origem', label: 'Origem', type: 'text' },
-            { name: 'instagram', label: 'Instagram', type: 'text' },
+            { name: 'instagram', label: '@ Instagram', type: 'text' },
             { name: 'seguidores', label: 'Seguidores', type: 'text' },
             { name: 'cidade', label: 'Cidade/Estado', type: 'text' },
             { name: 'telefone', label: 'Telefone/WhatsApp', type: 'text' },
             { name: 'etapa', label: 'Etapa Atual', type: 'text' },
             { name: 'prioridade', label: 'Prioridade', type: 'text' },
             { name: 'obs', label: 'Observações Lead', type: 'textarea' },
+            { name: 'proxima', label: 'Próxima Ação', type: 'text' },
           ]}
         />
       )}

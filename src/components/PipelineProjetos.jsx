@@ -11,31 +11,44 @@ const colConfigs = {
   'FECHADA':        { color: '#4caf50',  icon: '✅' },
 };
 
+const initialForm = {
+  nome: '', cliente: '', arquiteto: '', tipos: [], etapa: 'A PRECIFICAR',
+  valor: 0, arquivo: 'Aguardando', origem: 'Parceiro', parceiro: '',
+  proximaAcao: '', observacoes: ''
+};
+
 export default function PipelineProjetos({ projects, setProjects, externalModalOpen, setExternalModalOpen }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    nome: '', cliente: '', arquiteto: '', tipos: [], etapa: 'A PRECIFICAR',
-    valor: 0, arquivo: 'Aguardando', origem: 'Parceiro', parceiro: '',
-    proximaAcao: '', observacoes: ''
-  });
+  const [formData, setFormData] = useState(initialForm);
 
   useEffect(() => {
     if (externalModalOpen) {
       setIsModalOpen(true);
+      setFormData(initialForm); // Reset form when opening from header
       setExternalModalOpen(false);
     }
   }, [externalModalOpen, setExternalModalOpen]);
 
   const handleSave = () => {
+    if (!formData.nome) {
+      alert('Por favor, preencha o nome do projeto.');
+      return;
+    }
+
     const next = { ...projects };
     const novo = {
       id: Date.now(),
       ...formData,
       data: new Date().toLocaleDateString('pt-BR')
     };
-    next[formData.etapa] = [...(next[formData.etapa] || []), novo];
+
+    // Ensure the column exists
+    const targetCol = formData.etapa || 'A PRECIFICAR';
+    next[targetCol] = [...(next[targetCol] || []), novo];
+    
     setProjects(next);
     setIsModalOpen(false);
+    setFormData(initialForm); // Reset after save
   };
 
   return (
@@ -52,7 +65,7 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
               <div style={{ display: 'grid', gap: 15 }}>
                 <div className="form-group">
                   <label className="form-label" style={{ color: 'var(--emaer-azul-claro)' }}>NOME DO PROJETO *</label>
-                  <input className="form-control" style={{ borderColor: 'red' }} value={formData.nome} onChange={(e)=>setFormData({...formData, nome: e.target.value})} />
+                  <input className="form-control" style={{ borderColor: formData.nome ? '#ccc' : 'red' }} value={formData.nome} onChange={(e)=>setFormData({...formData, nome: e.target.value})} />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'flex-end' }}>
@@ -61,6 +74,7 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
                     <select className="form-control" value={formData.cliente} onChange={(e)=>setFormData({...formData, cliente: e.target.value})}>
                       <option value="">─ nenhum ─</option>
                       <option value="Cliente A">Cliente A</option>
+                      <option value="Cliente B">Cliente B</option>
                     </select>
                   </div>
                   <button className="btn-primary" style={{ padding: '8px 12px', background: '#331111' }}>+ Novo</button>
@@ -72,6 +86,7 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
                     <select className="form-control" value={formData.arquiteto} onChange={(e)=>setFormData({...formData, arquiteto: e.target.value})}>
                       <option value="">─ nenhum ─</option>
                       <option value="Arq X">Arq X</option>
+                      <option value="Arq Y">Arq Y</option>
                     </select>
                   </div>
                   <button className="btn-primary" style={{ padding: '8px 12px', background: '#331111' }}>+ Novo</button>
@@ -117,12 +132,14 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
                   <select className="form-control" value={formData.origem} onChange={(e)=>setFormData({...formData, origem: e.target.value})}>
                     <option>Parceiro</option>
                     <option>Google</option>
+                    <option>Instagram</option>
+                    <option>Indicação</option>
                   </select>
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">PRÓXIMA AÇÃO</label>
-                  <input type="date" className="form-control" style={{ borderColor: 'red' }} value={formData.proximaAcao} onChange={(e)=>setFormData({...formData, proximaAcao: e.target.value})} />
+                  <input type="date" className="form-control" value={formData.proximaAcao} onChange={(e)=>setFormData({...formData, proximaAcao: e.target.value})} />
                 </div>
 
                 <div className="form-group">
@@ -160,7 +177,7 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
                 </div>
               ))}
               <button className="btn-secondary" style={{ width: '100%', borderStyle: 'dashed' }} onClick={() => {
-                setFormData({ ...formData, etapa: col });
+                setFormData({ ...initialForm, etapa: col });
                 setIsModalOpen(true);
               }}>+ Novo Projeto</button>
             </div>
