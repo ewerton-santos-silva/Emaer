@@ -3,232 +3,305 @@ import { useState, useMemo } from 'react';
 const fmt = (v) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-const defaultFatoresComplexidade = [
-  { id: 'balanco_3_5', label: 'Balanço (3 a 5m)', pct: 3, checked: false },
-  { id: 'balanco_gt5', label: 'Balanço (>5m)', pct: 10, checked: false },
-  { id: 'transicao_leve', label: 'Transição leve (<3 pilares)', pct: 3, checked: false },
-  { id: 'transicao_pesada', label: 'Transição pesada (>3 pilares)', pct: 10, checked: false },
-  { id: 'vao_grande', label: 'Vão grande (>9m)', pct: 3, checked: false },
-  { id: 'escada_moderna', label: 'Escada Moderna', pct: 3, checked: false },
-  { id: 'protensao_completa', label: 'Protensão completa', pct: 8, checked: false },
-  { id: 'protensao_localizada', label: 'Protensão localizada', pct: 5, checked: false },
-  { id: 'detalhes_metalicos', label: 'Detalhes metálicos', pct: 4, checked: false },
-  { id: 'terreno_desnivel', label: 'Terreno em desnível (>5m)', pct: 4, checked: false },
-  { id: 'laje_plana', label: 'Laje Plana (sem vigas)', pct: 4, checked: false },
-  { id: 'fundacao_profunda', label: 'Fundação Profunda', pct: 5, checked: false },
-  { id: 'obra_divisa', label: 'Obra em Divisa', pct: 3, checked: false },
-  { id: 'sobrecarga', label: 'Sobrecarga >500 Kgf/m²', pct: 4, checked: false },
-  { id: 'piscina', label: 'Piscina na Cobertura', pct: 5, checked: false },
-  { id: 'bim', label: 'Compatibilização em BIM', pct: 5, checked: false },
-];
-
-const defaultFatoresRepeticao = [
-  { desc: 'Sem repetições', fator: 1 },
-  { desc: 'Até 3 repetições', fator: 0.8 },
-  { desc: '3 a 8 repetições', fator: 0.7 },
-  { desc: '8 a 12 repetições', fator: 0.6 },
-  { desc: '+12 repetições', fator: 0.5 },
-];
-
-const defaultMediaNacional = [
-  { regiao: 'Norte', residencial: 13.3, predial: 12.9, comercial: 32.6 },
-  { regiao: 'Nordeste', residencial: 15.2, predial: 17.2, comercial: 31.2 },
-  { regiao: 'Centroeste', residencial: 12.7, predial: 10.1, comercial: 23.8 },
-  { regiao: 'Sudeste', residencial: 22.8, predial: 18.6, comercial: 37.5 },
-  { regiao: 'Sul', residencial: 17.1, predial: 14, comercial: 23.9 },
-];
-
-const defaultEquipe = [
-  { id: 'eng_dono', label: 'Engenheiro - Dono', salario: 15000, encargos: 30, horasMes: 160 },
-  { id: 'eng_colab', label: 'Engenheiro - colaborador', salario: 8000, encargos: 30, horasMes: 160 },
-  { id: 'estagiario_1', label: 'Estagiário 1', salario: 1500, encargos: 0, horasMes: 120 },
-];
-
 export default function Precificacao({ projects, setProjects }) {
   const [selectedProjectId, setSelectedProjectId] = useState('');
-  const [activeTab, setActiveTab] = useState('complexidade');
+  const [activeTab, setActiveTab] = useState('hora_trabalhada');
   
-  const [fatoresComplexidade, setFatoresComplexidade] = useState(defaultFatoresComplexidade);
-  const [regiao, setRegiao] = useState('Sul');
-  const [tipoObra, setTipoObra] = useState('Residencial');
-  const [area, setArea] = useState(0);
-  const [repeticaoIdx, setRepeticaoIdx] = useState(0);
-  const [tributacao, setTributacao] = useState(11);
-  const [meuPrecoM2, setMeuPrecoM2] = useState(0);
-
-  const [equipe, setEquipe] = useState(defaultEquipe);
-  const [levantamentos, setLevantamentos] = useState([
-    { etapa: 'Reunião de briefing', responsavelId: '', horas: 0 },
-    { etapa: 'Visita ao local', responsavelId: '', horas: 0 },
-    { etapa: 'Modelagem Estrutural', responsavelId: '', horas: 0 },
-    { etapa: 'Detalhamento', responsavelId: '', horas: 0 },
+  // -- EQUIPE --
+  const [equipe, setEquipe] = useState([
+    { id: 1, cargo: 'Engenheiro', horasMes: 160, salario: 15000, cFixo: 0 },
+    { id: 2, cargo: 'Estagiário', horasMes: 120, salario: 1500, cFixo: 0 },
   ]);
+  const addMembro = () => setEquipe([...equipe, { id: Date.now(), cargo: '', horasMes: 160, salario: 0, cFixo: 0 }]);
+  const delMembro = (id) => setEquipe(equipe.filter(m => m.id !== id));
+
+  // -- CUSTOS FIXOS --
+  const [custosFixos, setCustosFixos] = useState([
+    { id: 1, item: 'Aluguel', valor: 1500 },
+    { id: 2, item: 'Luz', valor: 300 },
+    { id: 3, item: 'Água', valor: 300 },
+    { id: 4, item: 'Internet', valor: 150 },
+    { id: 5, item: 'Licenças de Software', valor: 1000 },
+    { id: 6, item: 'Marketing', valor: 1000 },
+    { id: 7, item: 'CREA (Anuidade + 12)', valor: 200 },
+  ]);
+  const [horasBaseFixo, setHorasBaseFixo] = useState(160);
+  const addCustoFixo = () => setCustosFixos([...custosFixos, { id: Date.now(), item: '', valor: 0 }]);
+  const delCustoFixo = (id) => setCustosFixos(custosFixos.filter(c => c.id !== id));
+
+  // -- LEVANTAMENTOS --
+  const [levantamentos, setLevantamentos] = useState([
+    { id: 1, etapa: 'Reunião de briefing', responsavelId: '', horas: 0 },
+    { id: 2, etapa: 'Visita ao local', responsavelId: '', horas: 0 },
+    { id: 3, etapa: 'Levantamentos In Loco', responsavelId: '', horas: 0 },
+    { id: 4, etapa: 'Documentação', responsavelId: '', horas: 0 },
+    { id: 5, etapa: 'Criação da proposta', responsavelId: '', horas: 0 },
+  ]);
+  const addLevantamento = () => setLevantamentos([...levantamentos, { id: Date.now(), etapa: '', responsavelId: '', horas: 0 }]);
+  const delLevantamento = (id) => setLevantamentos(levantamentos.filter(l => l.id !== id));
+
+  // -- PROJETO ESTRUTURAL --
+  const [projetoEstrutural, setProjetoEstrutural] = useState([
+    { id: 1, etapa: 'Concepção', responsavelId: '', horas: 0 },
+    { id: 2, etapa: 'Modelagem', responsavelId: '', horas: 0 },
+    { id: 3, etapa: 'Análise', responsavelId: '', horas: 0 },
+    { id: 4, etapa: 'Dimensionamento', responsavelId: '', horas: 0 },
+    { id: 5, etapa: 'Compatibilização', responsavelId: '', horas: 0 },
+    { id: 6, etapa: 'Otimização', responsavelId: '', horas: 0 },
+    { id: 7, etapa: 'Detalhamento', responsavelId: '', horas: 0 },
+    { id: 8, etapa: 'Correção', responsavelId: '', horas: 0 },
+    { id: 9, etapa: 'Plotagem', responsavelId: '', horas: 0 },
+    { id: 10, etapa: 'Reunião de entrega', responsavelId: '', horas: 0 },
+  ]);
+  const addEstrutural = () => setProjetoEstrutural([...projetoEstrutural, { id: Date.now(), etapa: '', responsavelId: '', horas: 0 }]);
+  const delEstrutural = (id) => setProjetoEstrutural(projetoEstrutural.filter(p => p.id !== id));
+
+  // -- CUSTOS VARIÁVEIS --
+  const [custosVariaveis, setCustosVariaveis] = useState([
+    { id: 1, item: 'Renders', valor: 0 },
+    { id: 2, item: 'Plotagens extras', valor: 0 },
+  ]);
+  const addVariavel = () => setCustosVariaveis([...custosVariaveis, { id: Date.now(), item: '', valor: 0 }]);
+  const delVariavel = (id) => setCustosVariaveis(custosVariaveis.filter(v => v.id !== id));
+
+  // -- MARGENS --
   const [margemLucro, setMargemLucro] = useState(30);
+  const [tributacao, setTributacao] = useState(11);
+  const [valorEditado, setValorEditado] = useState(0);
+
+  // -- CALCULOS --
+  const calcValorHoraMembro = (m) => (m.salario * (1 + m.cFixo/100)) / m.horasMes;
+  const totalFixosMensal = custosFixos.reduce((a, b) => a + b.valor, 0);
+  const custoFixoHoraEscritorio = totalFixosMensal / horasBaseFixo;
+
+  const totalHorasProjeto = [...levantamentos, ...projetoEstrutural].reduce((a, b) => a + b.horas, 0);
+  const custoFixoProjeto = totalHorasProjeto * custoFixoHoraEscritorio;
+
+  const custoEquipe = [...levantamentos, ...projetoEstrutural].reduce((acc, curr) => {
+    const membro = equipe.find(m => m.id === Number(curr.responsavelId));
+    return acc + (curr.horas * (membro ? calcValorHoraMembro(membro) : 0));
+  }, 0);
+
+  const totalVariaveis = custosVariaveis.reduce((a, b) => a + b.valor, 0);
+  const subtotalCustos = custoEquipe + custoFixoProjeto + totalVariaveis;
+
+  const valorFinalAuto = subtotalCustos / (1 - (margemLucro + tributacao) / 100);
+  const valorExibido = valorEditado > 0 ? valorEditado : valorFinalAuto;
+
+  const lucroValor = valorExibido * (margemLucro / 100);
+  const impostoValor = valorExibido * (tributacao / 100);
 
   const selectedProject = useMemo(() => 
     Object.values(projects).flat().find(p => p.id === Number(selectedProjectId))
   , [projects, selectedProjectId]);
 
-  const refMercado = useMemo(() => {
-    const r = defaultMediaNacional.find(m => m.regiao === regiao);
-    if (!r) return 0;
-    if (tipoObra === 'Residencial') return r.residencial;
-    if (tipoObra === 'Predial') return r.predial;
-    return r.comercial;
-  }, [regiao, tipoObra]);
-
-  const calcValorHora = (membro) => {
-    const totalSalario = (membro.salario || 0) * (1 + (membro.encargos || 0) / 100);
-    return totalSalario / (membro.horasMes || 160);
-  };
-
-  const calcCustoEtapa = (etapas) => {
-    return etapas.reduce((acc, curr) => {
-      const membro = equipe.find(m => m.id === curr.responsavelId);
-      return acc + (curr.horas * (membro ? calcValorHora(membro) : 0));
-    }, 0);
-  };
-
-  const complexidadeExtraPct = fatoresComplexidade.filter(f => f.checked).reduce((acc, f) => acc + f.pct, 0);
-  const fatorRepeticao = defaultFatoresRepeticao[repeticaoIdx]?.fator || 1;
-  
-  const valorFinalMetodo1 = area * (meuPrecoM2 || refMercado) * (1 + complexidadeExtraPct / 100) * fatorRepeticao;
-  
-  const custoEquipe = calcCustoEtapa(levantamentos);
-  const valorFinalMetodo2 = custoEquipe / (1 - (margemLucro + tributacao) / 100);
-
-  const valorFinal = activeTab === 'complexidade' ? valorFinalMetodo1 : valorFinalMetodo2;
-
   const handleAprovar = () => {
     if (!selectedProject) return;
     const next = { ...projects };
     Object.keys(next).forEach(col => {
-      next[col] = next[col].map(p => p.id === selectedProject.id ? { ...p, valor: valorFinal, status: 'Precificado' } : p);
+      next[col] = next[col].map(p => p.id === selectedProject.id ? { ...p, valor: valorExibido, status: 'Precificado' } : p);
     });
     setProjects(next);
-    alert('Proposta aprovada!');
+    alert('Proposta enviada ao Pipeline!');
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
-        <select className="form-control" style={{ width: 250 }} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
-          <option value="">Selecione o Projeto...</option>
-          {Object.values(projects).flat().map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-        </select>
-        <div style={{ display: 'flex', gap: 4, background: '#eee', padding: 4, borderRadius: 8 }}>
-          {['complexidade', 'hora_trabalhada', 'comparativo'].map(t => (
-            <button key={t} onClick={() => setActiveTab(t)} style={{
-              padding: '8px 16px', border: 'none', borderRadius: 6, cursor: 'pointer',
-              background: activeTab === t ? 'var(--emaer-azul-principal)' : 'transparent',
-              color: activeTab === t ? '#fff' : '#666', fontWeight: 600, fontSize: 12
-            }}>{t.replace('_', ' ').toUpperCase()}</button>
-          ))}
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
+          <select className="form-control" style={{ width: 250 }} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
+            <option value="">Selecione o Projeto...</option>
+            {Object.values(projects).flat().map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+          <div style={{ display: 'flex', gap: 4, background: '#eee', padding: 4, borderRadius: 8 }}>
+            {['complexidade', 'hora_trabalhada', 'comparativo'].map(t => (
+              <button key={t} onClick={() => setActiveTab(t)} style={{
+                padding: '8px 16px', border: 'none', borderRadius: 6, cursor: 'pointer',
+                background: activeTab === t ? 'var(--emaer-azul-principal)' : 'transparent',
+                color: activeTab === t ? '#fff' : '#666', fontWeight: 600, fontSize: 12
+              }}>{t.replace('_', ' ').toUpperCase()}</button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-body">
-          {activeTab === 'complexidade' && (
-            <>
-              <h3 style={{ fontSize: 14, textTransform: 'uppercase', marginBottom: 20, color: 'var(--emaer-azul-principal)' }}>MÉTODO 1 - PRECIFICAÇÃO POR M² E COMPLEXIDADE</h3>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 25 }}>
-                <div className="form-group"><label className="form-label">REGIÃO DA OBRA</label>
-                  <select className="form-control" value={regiao} onChange={(e)=>setRegiao(e.target.value)}>
-                    {defaultMediaNacional.map(m => <option key={m.regiao} value={m.regiao}>{m.regiao}</option>)}
-                  </select>
-                </div>
-                <div className="form-group"><label className="form-label">TIPO DE OBRA</label>
-                  <select className="form-control" value={tipoObra} onChange={(e)=>setTipoObra(e.target.value)}><option>Residencial</option><option>Predial</option><option>Comercial</option></select>
-                </div>
-                <div className="form-group"><label className="form-label">ÁREA TOTAL (M²)</label>
-                  <input type="number" className="form-control" value={area} onChange={(e)=>setArea(Number(e.target.value))} />
-                </div>
-                <div className="form-group"><label className="form-label">PAVIMENTOS REPETIDOS</label>
-                  <select className="form-control" value={repeticaoIdx} onChange={(e)=>setRepeticaoIdx(Number(e.target.value))}>
-                    {defaultFatoresRepeticao.map((f, i) => <option key={i} value={i}>{f.desc} (x{f.fator})</option>)}
-                  </select>
-                </div>
-              </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 20 }}>
+        {/* Main Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          
+          {/* Gestão de Equipe */}
+          <div className="card">
+            <div className="card-body">
+              <h4 style={{ marginBottom: 15, fontSize: 13, textTransform: 'uppercase' }}>Gestão de Equipe</h4>
+              <table style={{ width: '100%' }}>
+                <thead><tr><th>Cargo</th><th>H/Mês</th><th>Salário</th><th>% C.Fixo</th><th></th></tr></thead>
+                <tbody>
+                  {equipe.map((m, i) => (
+                    <tr key={m.id}>
+                      <td><input className="form-control" value={m.cargo} onChange={(e) => {
+                        const n = [...equipe]; n[i].cargo = e.target.value; setEquipe(n);
+                      }} /></td>
+                      <td><input type="number" className="form-control" value={m.horasMes} onChange={(e) => {
+                        const n = [...equipe]; n[i].horasMes = Number(e.target.value); setEquipe(n);
+                      }} /></td>
+                      <td><input type="number" className="form-control" value={m.salario} onChange={(e) => {
+                        const n = [...equipe]; n[i].salario = Number(e.target.value); setEquipe(n);
+                      }} /></td>
+                      <td><input type="number" className="form-control" value={m.cFixo} onChange={(e) => {
+                        const n = [...equipe]; n[i].cFixo = Number(e.target.value); setEquipe(n);
+                      }} /></td>
+                      <td><button onClick={()=>delMembro(m.id)} style={{border:'none',background:'none',cursor:'pointer'}}>🗑️</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button className="btn-secondary" style={{ marginTop: 10, fontSize: 11 }} onClick={addMembro}>+ Adicionar membro</button>
+            </div>
+          </div>
 
-              <h3 style={{ fontSize: 12, color: '#999', textTransform: 'uppercase', marginBottom: 15 }}>FATORES DE COMPLEXIDADE — SELECIONE OS QUE SE APLICAM</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {fatoresComplexidade.map((f, i) => (
-                  <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f9f9f9', borderRadius: 8 }}>
-                    <label style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 13 }}>
-                      <input type="checkbox" checked={f.checked} onChange={() => {
-                        const n = [...fatoresComplexidade]; n[i].checked = !n[i].checked; setFatoresComplexidade(n);
-                      }} /> {f.label}
-                    </label>
-                    <input 
-                      type="number" 
-                      className="form-control" 
-                      style={{ width: 60, padding: 4, height: 25, fontSize: 12 }} 
-                      value={f.pct} 
-                      onChange={(e) => {
-                        const n = [...fatoresComplexidade]; n[i].pct = Number(e.target.value); setFatoresComplexidade(n);
-                      }} 
-                    />
-                  </div>
-                ))}
+          {/* Custos Fixos Escritório */}
+          <div className="card">
+            <div className="card-body">
+              <h4 style={{ marginBottom: 15, fontSize: 13, textTransform: 'uppercase' }}>Custos Fixos do Escritório</h4>
+              <div style={{ display: 'flex', gap: 20, marginBottom: 15 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: '#999' }}>HORAS BASE (DIVISOR)</div>
+                  <input type="number" className="form-control" value={horasBaseFixo} onChange={(e)=>setHorasBaseFixo(Number(e.target.value))} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: '#999' }}>CUSTO/HORA</div>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>{fmt(custoFixoHoraEscritorio)}/h</div>
+                </div>
               </div>
-            </>
-          )}
+              <table style={{ width: '100%' }}>
+                <thead><tr><th>Item</th><th>R$/Mês</th><th></th></tr></thead>
+                <tbody>
+                  {custosFixos.map((c, i) => (
+                    <tr key={c.id}>
+                      <td><input className="form-control" value={c.item} onChange={(e) => {
+                        const n = [...custosFixos]; n[i].item = e.target.value; setCustosFixos(n);
+                      }} /></td>
+                      <td><input type="number" className="form-control" value={c.valor} onChange={(e) => {
+                        const n = [...custosFixos]; n[i].valor = Number(e.target.value); setCustosFixos(n);
+                      }} /></td>
+                      <td><button onClick={()=>delCustoFixo(c.id)} style={{border:'none',background:'none',cursor:'pointer'}}>🗑️</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button className="btn-secondary" style={{ marginTop: 10, fontSize: 11 }} onClick={addCustoFixo}>+ Adicionar item</button>
+            </div>
+          </div>
 
-          {activeTab === 'hora_trabalhada' && (
-            <div style={{ display: 'grid', gap: 25 }}>
-              <div>
-                <h4 style={{ fontSize: 14, color: 'var(--emaer-azul-principal)', marginBottom: 15 }}>GESTAO DA EQUIPE</h4>
-                <table style={{ width: '100%' }}>
-                  <thead><tr><th>Membro</th><th>Salário</th><th>Encargos %</th><th>Valor/Hora</th></tr></thead>
-                  <tbody>
-                    {equipe.map((m, i) => (
-                      <tr key={m.id}>
-                        <td>{m.label}</td>
-                        <td><input type="number" className="form-control" value={m.salario} onChange={(e) => {
-                          const n = [...equipe]; n[i].salario = Number(e.target.value); setEquipe(n);
+          {/* Levantamentos */}
+          <div className="card">
+            <div className="card-body">
+              <h4 style={{ marginBottom: 15, fontSize: 13, textTransform: 'uppercase' }}>Levantamentos</h4>
+              <table style={{ width: '100%' }}>
+                <thead><tr><th>Etapa</th><th>Responsável</th><th>Horas</th><th></th></tr></thead>
+                <tbody>
+                  {levantamentos.map((l, i) => (
+                    <tr key={l.id}>
+                      <td><input className="form-control" value={l.etapa} onChange={(e) => {
+                        const n = [...levantamentos]; n[i].etapa = e.target.value; setLevantamentos(n);
+                      }} /></td>
+                      <td><select className="form-control" value={l.responsavelId} onChange={(e) => {
+                        const n = [...levantamentos]; n[i].responsavelId = e.target.value; setLevantamentos(n);
+                      }}>
+                        <option value="">─</option>
+                        {equipe.map(m => <option key={m.id} value={m.id}>{m.cargo}</option>)}
+                      </select></td>
+                      <td><input type="number" className="form-control" value={l.horas} onChange={(e) => {
+                        const n = [...levantamentos]; n[i].horas = Number(e.target.value); setLevantamentos(n);
+                      }} /></td>
+                      <td><button onClick={()=>delLevantamento(l.id)} style={{border:'none',background:'none',cursor:'pointer'}}>🗑️</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button className="btn-secondary" style={{ marginTop: 10, fontSize: 11 }} onClick={addLevantamento}>+ Adicionar etapa</button>
+            </div>
+          </div>
+
+          {/* Projeto Estrutural */}
+          <div className="card">
+            <div className="card-body">
+              <h4 style={{ marginBottom: 15, fontSize: 13, textTransform: 'uppercase' }}>Projeto Estrutural</h4>
+              <table style={{ width: '100%' }}>
+                <thead><tr><th>Etapa</th><th>Responsável</th><th>Horas</th><th>R$/Etapa</th><th></th></tr></thead>
+                <tbody>
+                  {projetoEstrutural.map((p, i) => {
+                    const membro = equipe.find(m => m.id === Number(p.responsavelId));
+                    const valorEtapa = p.horas * (membro ? calcValorHoraMembro(membro) : 0);
+                    return (
+                      <tr key={p.id}>
+                        <td><input className="form-control" value={p.etapa} onChange={(e) => {
+                          const n = [...projetoEstrutural]; n[i].etapa = e.target.value; setProjetoEstrutural(n);
                         }} /></td>
-                        <td><input type="number" className="form-control" value={m.encargos} onChange={(e) => {
-                          const n = [...equipe]; n[i].encargos = Number(e.target.value); setEquipe(n);
-                        }} /></td>
-                        <td style={{ fontWeight: 700 }}>{fmt(calcValorHora(m))}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div>
-                <h4 style={{ fontSize: 14, color: 'var(--emaer-azul-principal)', marginBottom: 15 }}>CRONOGRAMA DE HORAS</h4>
-                <table style={{ width: '100%' }}>
-                  <thead><tr><th>Etapa</th><th>Responsável</th><th>Horas Estimadas</th></tr></thead>
-                  <tbody>
-                    {levantamentos.map((l, i) => (
-                      <tr key={i}>
-                        <td>{l.etapa}</td>
-                        <td><select className="form-control" value={l.responsavelId} onChange={(e) => {
-                          const n = [...levantamentos]; n[i].responsavelId = e.target.value; setLevantamentos(n);
+                        <td><select className="form-control" value={p.responsavelId} onChange={(e) => {
+                          const n = [...projetoEstrutural]; n[i].responsavelId = e.target.value; setProjetoEstrutural(n);
                         }}>
-                          <option value="">─ Selecione ─</option>
-                          {equipe.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                          <option value="">─</option>
+                          {equipe.map(m => <option key={m.id} value={m.id}>{m.cargo}</option>)}
                         </select></td>
-                        <td><input type="number" className="form-control" value={l.horas} onChange={(e) => {
-                          const n = [...levantamentos]; n[i].horas = Number(e.target.value); setLevantamentos(n);
+                        <td><input type="number" className="form-control" value={p.horas} onChange={(e) => {
+                          const n = [...projetoEstrutural]; n[i].horas = Number(e.target.value); setProjetoEstrutural(n);
                         }} /></td>
+                        <td style={{ fontSize: 12, fontWeight: 600 }}>{fmt(valorEtapa)}</td>
+                        <td><button onClick={()=>delEstrutural(p.id)} style={{border:'none',background:'none',cursor:'pointer'}}>🗑️</button></td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <button className="btn-secondary" style={{ marginTop: 10, fontSize: 11 }} onClick={addEstrutural}>+ Adicionar etapa</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Summary */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="card">
+            <div className="card-body">
+              <h4 style={{ marginBottom: 20, fontSize: 13, textTransform: 'uppercase' }}>Resumo - Método 2</h4>
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div style={{ display:'flex', justifyContent:'space-between' }}><span>Custo Equipe</span><span>{fmt(custoEquipe)}</span></div>
+                <div style={{ display:'flex', justifyContent:'space-between' }}><span>Custo Fixo do Projeto</span><span>{fmt(custoFixoProjeto)}</span></div>
+                <div style={{ display:'flex', justifyContent:'space-between' }}><span>Custos Variáveis</span><span>{fmt(totalVariaveis)}</span></div>
+                <div style={{ display:'flex', justifyContent:'space-between', fontWeight: 800, borderTop: '1px solid #eee', paddingTop: 10 }}>
+                  <span>Subtotal Custos</span><span>{fmt(subtotalCustos)}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+                  <div className="form-group">
+                    <label className="form-label">MARGEM (%)</label>
+                    <input type="number" className="form-control" value={margemLucro} onChange={(e)=>setMargemLucro(Number(e.target.value))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">TRIBUTAÇÃO (%)</label>
+                    <input type="number" className="form-control" value={tributacao} onChange={(e)=>setTributacao(Number(e.target.value))} />
+                  </div>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between' }}><span>Lucro do Projeto ({margemLucro}%)</span><span>{fmt(lucroValor)}</span></div>
+                <div style={{ display:'flex', justifyContent:'space-between' }}><span>Imposto ({tributacao}%)</span><span>{fmt(impostoValor)}</span></div>
+                
+                <div style={{ marginTop: 20, padding: 15, background: '#f9f9f9', borderRadius: 10, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: '#999', textTransform: 'uppercase' }}>Valor Final do Projeto</div>
+                  <div style={{ fontSize: 32, fontWeight: 800, color: '#d32f2f' }}>{fmt(valorExibido)}</div>
+                  <div style={{ fontSize: 11, color: '#888' }}>{totalHorasProjeto}h estimadas</div>
+                </div>
+
+                <div style={{ marginTop: 15 }}>
+                  <label className="form-label">Editar valor antes de aprovar</label>
+                  <input type="number" className="form-control" style={{ borderColor: '#d32f2f' }} value={valorEditado} onChange={(e)=>setValorEditado(Number(e.target.value))} />
+                  <p style={{ fontSize: 10, color: '#aaa', marginTop: 4 }}>Calculado automaticamente • edite se necessário</p>
+                </div>
+
+                <button className="btn-primary" style={{ width: '100%', padding: 15, marginTop: 10, background: '#2E9E5B' }} onClick={handleAprovar} disabled={!selectedProjectId}>
+                  Aprovar → Pipeline
+                </button>
               </div>
             </div>
-          )}
-
-          <div style={{ marginTop: 30, paddingTop: 20, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div>
-              <div style={{ fontSize: 11, color: '#999', textTransform: 'uppercase' }}>Valor Total Estimado</div>
-              <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--emaer-azul-principal)' }}>{fmt(valorFinal)}</div>
-            </div>
-            <button className="btn-primary" style={{ padding: '12px 30px' }} onClick={handleAprovar} disabled={!selectedProjectId}>APROVAR E ENVIAR AO PIPELINE</button>
           </div>
         </div>
       </div>

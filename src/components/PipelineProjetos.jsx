@@ -24,7 +24,7 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
   useEffect(() => {
     if (externalModalOpen) {
       setIsModalOpen(true);
-      setFormData(initialForm); // Reset form when opening from header
+      setFormData(initialForm);
       setExternalModalOpen(false);
     }
   }, [externalModalOpen, setExternalModalOpen]);
@@ -34,21 +34,17 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
       alert('Por favor, preencha o nome do projeto.');
       return;
     }
-
     const next = { ...projects };
     const novo = {
       id: Date.now(),
       ...formData,
       data: new Date().toLocaleDateString('pt-BR')
     };
-
-    // Ensure the column exists
     const targetCol = formData.etapa || 'A PRECIFICAR';
     next[targetCol] = [...(next[targetCol] || []), novo];
-    
     setProjects(next);
     setIsModalOpen(false);
-    setFormData(initialForm); // Reset after save
+    setFormData(initialForm);
   };
 
   return (
@@ -74,10 +70,9 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
                     <select className="form-control" value={formData.cliente} onChange={(e)=>setFormData({...formData, cliente: e.target.value})}>
                       <option value="">─ nenhum ─</option>
                       <option value="Cliente A">Cliente A</option>
-                      <option value="Cliente B">Cliente B</option>
                     </select>
                   </div>
-                  <button className="btn-primary" style={{ padding: '8px 12px', background: '#331111' }}>+ Novo</button>
+                  <button className="btn-primary" style={{ padding: '8px 12px', background: '#331111' }} onClick={() => alert('Abrir cadastro de novo cliente...')}>+ Novo</button>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'flex-end' }}>
@@ -86,10 +81,9 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
                     <select className="form-control" value={formData.arquiteto} onChange={(e)=>setFormData({...formData, arquiteto: e.target.value})}>
                       <option value="">─ nenhum ─</option>
                       <option value="Arq X">Arq X</option>
-                      <option value="Arq Y">Arq Y</option>
                     </select>
                   </div>
-                  <button className="btn-primary" style={{ padding: '8px 12px', background: '#331111' }}>+ Novo</button>
+                  <button className="btn-primary" style={{ padding: '8px 12px', background: '#331111' }} onClick={() => alert('Abrir cadastro de novo arquiteto...')}>+ Novo</button>
                 </div>
 
                 <div className="form-group">
@@ -132,8 +126,6 @@ export default function PipelineProjetos({ projects, setProjects, externalModalO
                   <select className="form-control" value={formData.origem} onChange={(e)=>setFormData({...formData, origem: e.target.value})}>
                     <option>Parceiro</option>
                     <option>Google</option>
-                    <option>Instagram</option>
-                    <option>Indicação</option>
                   </select>
                 </div>
 
