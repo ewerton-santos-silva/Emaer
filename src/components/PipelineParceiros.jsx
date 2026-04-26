@@ -1,113 +1,78 @@
 import { useState } from 'react';
-import { formatCurrency } from './ui/Shared';
-import Modal from './ui/Modal';
 
-const initialParceiros = [
-  { 
-    id: 1, nome: 'Igor Cabral', origem: 'Google', profissao: 'Arquiteto', 
-    instagram: '@igorcabral', seguidores: '1.2k', obs: 'Interesse em estrutural', 
-    cidade: 'Recife/PE', telefone: '(81) 99988-7766', etapa: 'Entrar em contato', 
-    prioridade: 'Alta', dataPrimeiro: '20/04/26', dataUltimo: '22/04/26', proxima: '25/04/26'
-  },
-  { 
-    id: 2, nome: 'Manuela arq', origem: 'Instagram', profissao: 'Arquiteto', 
-    instagram: '@manuela.arq', seguidores: '5k', obs: 'Parceiro antigo', 
-    cidade: 'Olinda/PE', telefone: '(81) 98877-6655', etapa: 'Reunião agendada', 
-    prioridade: 'Média', dataPrimeiro: '15/04/26', dataUltimo: '18/04/26', proxima: '26/04/26'
-  },
-];
+const colConfigs = {
+  'PROSPECÇÃO':      { color: '#555',     icon: '🔍' },
+  'CONTATADO':       { color: '#185FA5',  icon: '📞' },
+  'REUNIÃO':         { color: '#EF9F27',  icon: '🤝' },
+  'PARCERIA FIRMADA': { color: '#2E9E5B',  icon: '✅' },
+  'INATIVO':         { color: '#999',     icon: '📁' },
+};
+
+const initialParceiros = {
+  'PROSPECÇÃO': [
+    { id: 1, nome: 'Igor Cabral', profissao: 'Arquiteto', instagram: '@igorcabral', local: 'Recife/PE', proxima: '25/04/26' },
+    { id: 2, nome: 'Pedro Silva', profissao: 'Engenheiro', instagram: '@pedro.eng', local: 'Olinda/PE', proxima: '28/04/26' },
+  ],
+  'CONTATADO': [
+    { id: 3, nome: 'Manuela arq', profissao: 'Arquiteto', instagram: '@manuela.arq', local: 'Jaboatão/PE', proxima: '26/04/26' },
+  ],
+  'REUNIÃO': [],
+  'PARCERIA FIRMADA': [],
+  'INATIVO': [],
+};
 
 export default function PipelineParceiros() {
   const [parceiros, setParceiros] = useState(initialParceiros);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
 
-  const handleSave = (formData) => {
-    if (editingItem) setParceiros(prev => prev.map(p => p.id === editingItem.id ? { ...p, ...formData } : p));
-    else setParceiros([...parceiros, { id: Date.now(), ...formData }]);
-    setIsModalOpen(false);
+  const moveCard = (cardId, fromCol, toCol) => {
+    const next = { ...parceiros };
+    const card = next[fromCol].find(p => p.id === cardId);
+    next[fromCol] = next[fromCol].filter(p => p.id !== cardId);
+    next[toCol] = [...next[toCol], card];
+    setParceiros(next);
   };
 
   return (
-    <div className="card">
-      <div className="card-body">
-        <div style={{ background: 'var(--emaer-red, #d32f2f)', color: '#fff', padding: '10px 20px', textAlign: 'center', fontWeight: 800, fontSize: 16, textTransform: 'uppercase', marginBottom: 20 }}>
-          PROSPECÇÃO ATIVA
+    <div className="kanban-board" style={{ display: 'flex', gap: 20, overflowX: 'auto', paddingBottom: 20 }}>
+      {Object.entries(colConfigs).map(([col, config]) => (
+        <div key={col} className="kanban-col" style={{ minWidth: 280, flex: 1, background: '#f5f5f5', borderRadius: 12, overflow: 'hidden' }}>
+          <div className="kanban-col-header" style={{ background: config.color, padding: '12px 15px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700 }}>
+              <span>{config.icon}</span> {col}
+            </div>
+            <span style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>
+              {parceiros[col].length}
+            </span>
+          </div>
+          
+          <div className="kanban-cards" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {parceiros[col].map(p => (
+              <div key={p.id} className="kanban-card" style={{ background: '#fff', padding: 15, borderRadius: 10, boxShadow: '0 2px 5px rgba(0,0,0,0.05)', borderTop: `3px solid ${config.color}` }}>
+                <div style={{ fontWeight: 700, color: 'var(--emaer-azul-principal)', marginBottom: 8 }}>{p.nome}</div>
+                <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}><strong>Profissão:</strong> {p.profissao}</div>
+                <div style={{ fontSize: 12, color: 'var(--emaer-azul-claro)', marginBottom: 4 }}>{p.instagram}</div>
+                <div style={{ fontSize: 11, color: '#999' }}>📍 {p.local}</div>
+                
+                <div style={{ marginTop: 12, display: 'flex', gap: 5 }}>
+                  {Object.keys(colConfigs).map(targetCol => (
+                    targetCol !== col && (
+                      <button 
+                        key={targetCol}
+                        onClick={() => moveCard(p.id, col, targetCol)}
+                        style={{ fontSize: 9, padding: '2px 5px', border: '1px solid #ddd', borderRadius: 4, cursor: 'pointer', background: '#fff' }}
+                        title={`Mover para ${targetCol}`}
+                      >
+                        {colConfigs[targetCol].icon}
+                      </button>
+                    )
+                  ))}
+                </div>
+              </div>
+            ))}
+            <button className="btn-secondary" style={{ width: '100%', borderStyle: 'dashed', fontSize: 12, padding: 8 }}>+ Novo Parceiro</button>
+          </div>
         </div>
-
-        <div className="section-header" style={{ marginBottom: 20 }}>
-          <div className="section-title">Parceiros em Prospecção</div>
-          <button className="btn-primary" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>+ Novo Parceiro</button>
-        </div>
-
-        <div className="table-container" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', minWidth: 1200 }}>
-            <thead>
-              <tr style={{ background: '#f5f5f5' }}>
-                <th>Nome do Contato</th>
-                <th>Origem</th>
-                <th>Profissão</th>
-                <th>@ Instagram</th>
-                <th>Seguidores</th>
-                <th>Obs. Lead</th>
-                <th>Cidade/Estado</th>
-                <th>Telefone/WA</th>
-                <th>Etapa Atual</th>
-                <th>Prioridade</th>
-                <th>Próxima Ação</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {parceiros.map(p => (
-                <tr key={p.id}>
-                  <td style={{ fontWeight: 600 }}>{p.nome}</td>
-                  <td>{p.origem}</td>
-                  <td>{p.profissao}</td>
-                  <td style={{ color: 'var(--emaer-azul-claro)' }}>{p.instagram}</td>
-                  <td>{p.seguidores}</td>
-                  <td style={{ fontSize: 11, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.obs}</td>
-                  <td>{p.cidade}</td>
-                  <td style={{ fontSize: 11 }}>{p.telefone}</td>
-                  <td>
-                    <span style={{ background: '#fff9c4', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>{p.etapa}</span>
-                  </td>
-                  <td>
-                    <span style={{ background: p.prioridade === 'Alta' ? '#ffebee' : '#f5f5f5', color: p.prioridade === 'Alta' ? '#d32f2f' : '#666', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>{p.prioridade}</span>
-                  </td>
-                  <td style={{ color: 'var(--emaer-ambar)', fontWeight: 700 }}>{p.proxima}</td>
-                  <td>
-                    <button className="btn-secondary" style={{ padding: '2px 6px', fontSize: 10 }} onClick={() => { setEditingItem(p); setIsModalOpen(true); }}>Editar</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {isModalOpen && (
-        <Modal 
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSave={handleSave}
-          title={editingItem ? 'Editar Parceiro' : 'Novo Parceiro'}
-          initialData={editingItem}
-          fields={[
-            { name: 'nome', label: 'Nome do Contato', type: 'text' },
-            { name: 'profissao', label: 'Profissão', type: 'text' },
-            { name: 'origem', label: 'Origem', type: 'text' },
-            { name: 'instagram', label: '@ Instagram', type: 'text' },
-            { name: 'seguidores', label: 'Seguidores', type: 'text' },
-            { name: 'cidade', label: 'Cidade/Estado', type: 'text' },
-            { name: 'telefone', label: 'Telefone/WhatsApp', type: 'text' },
-            { name: 'etapa', label: 'Etapa Atual', type: 'text' },
-            { name: 'prioridade', label: 'Prioridade', type: 'text' },
-            { name: 'obs', label: 'Observações Lead', type: 'textarea' },
-            { name: 'proxima', label: 'Próxima Ação', type: 'text' },
-          ]}
-        />
-      )}
+      ))}
     </div>
   );
 }

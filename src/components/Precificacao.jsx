@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 
 const fmt = (v) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
@@ -47,14 +47,8 @@ const defaultEquipe = [
 export default function Precificacao({ projects, setProjects }) {
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [activeTab, setActiveTab] = useState('complexidade');
-  const [showSettings, setShowSettings] = useState(false);
   
-  const [fatoresRepeticao] = useState(defaultFatoresRepeticao);
-  const [mediaNacional] = useState(defaultMediaNacional);
-  const [equipe, setEquipe] = useState(defaultEquipe);
   const [fatoresComplexidade, setFatoresComplexidade] = useState(defaultFatoresComplexidade);
-
-  // Method 1 (Complexity) Header State
   const [regiao, setRegiao] = useState('Sul');
   const [tipoObra, setTipoObra] = useState('Residencial');
   const [area, setArea] = useState(0);
@@ -62,14 +56,12 @@ export default function Precificacao({ projects, setProjects }) {
   const [tributacao, setTributacao] = useState(11);
   const [meuPrecoM2, setMeuPrecoM2] = useState(0);
 
-  // Method 2 (Hours) State
+  const [equipe, setEquipe] = useState(defaultEquipe);
   const [levantamentos, setLevantamentos] = useState([
     { etapa: 'Reunião de briefing', responsavelId: '', horas: 0 },
     { etapa: 'Visita ao local', responsavelId: '', horas: 0 },
-  ]);
-  const [projetoEstrutural, setProjetoEstrutural] = useState([
-    { etapa: 'Concepção', responsavelId: '', horas: 0 },
-    { etapa: 'Modelagem', responsavelId: '', horas: 0 },
+    { etapa: 'Modelagem Estrutural', responsavelId: '', horas: 0 },
+    { etapa: 'Detalhamento', responsavelId: '', horas: 0 },
   ]);
   const [margemLucro, setMargemLucro] = useState(30);
 
@@ -78,12 +70,12 @@ export default function Precificacao({ projects, setProjects }) {
   , [projects, selectedProjectId]);
 
   const refMercado = useMemo(() => {
-    const r = mediaNacional.find(m => m.regiao === regiao);
+    const r = defaultMediaNacional.find(m => m.regiao === regiao);
     if (!r) return 0;
     if (tipoObra === 'Residencial') return r.residencial;
     if (tipoObra === 'Predial') return r.predial;
     return r.comercial;
-  }, [regiao, tipoObra, mediaNacional]);
+  }, [regiao, tipoObra]);
 
   const calcValorHora = (membro) => {
     const totalSalario = (membro.salario || 0) * (1 + (membro.encargos || 0) / 100);
@@ -98,11 +90,11 @@ export default function Precificacao({ projects, setProjects }) {
   };
 
   const complexidadeExtraPct = fatoresComplexidade.filter(f => f.checked).reduce((acc, f) => acc + f.pct, 0);
-  const fatorRepeticao = fatoresRepeticao[repeticaoIdx]?.fator || 1;
+  const fatorRepeticao = defaultFatoresRepeticao[repeticaoIdx]?.fator || 1;
   
   const valorFinalMetodo1 = area * (meuPrecoM2 || refMercado) * (1 + complexidadeExtraPct / 100) * fatorRepeticao;
   
-  const custoEquipe = calcCustoEtapa(levantamentos) + calcCustoEtapa(projetoEstrutural);
+  const custoEquipe = calcCustoEtapa(levantamentos);
   const valorFinalMetodo2 = custoEquipe / (1 - (margemLucro + tributacao) / 100);
 
   const valorFinal = activeTab === 'complexidade' ? valorFinalMetodo1 : valorFinalMetodo2;
@@ -119,69 +111,44 @@ export default function Precificacao({ projects, setProjects }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
-          <select className="form-control" style={{ width: 250 }} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
-            <option value="">Selecione o Projeto...</option>
-            {Object.values(projects).flat().map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-          </select>
-          <div style={{ display: 'flex', gap: 4, background: '#eee', padding: 4, borderRadius: 8 }}>
-            {['complexidade', 'hora_trabalhada', 'comparativo'].map(t => (
-              <button key={t} onClick={() => setActiveTab(t)} style={{
-                padding: '8px 16px', border: 'none', borderRadius: 6, cursor: 'pointer',
-                background: activeTab === t ? 'var(--emaer-azul-principal)' : 'transparent',
-                color: activeTab === t ? '#fff' : '#666', fontWeight: 600, fontSize: 12
-              }}>{t.replace('_', ' ').toUpperCase()}</button>
-            ))}
-          </div>
+      <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
+        <select className="form-control" style={{ width: 250 }} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
+          <option value="">Selecione o Projeto...</option>
+          {Object.values(projects).flat().map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+        </select>
+        <div style={{ display: 'flex', gap: 4, background: '#eee', padding: 4, borderRadius: 8 }}>
+          {['complexidade', 'hora_trabalhada', 'comparativo'].map(t => (
+            <button key={t} onClick={() => setActiveTab(t)} style={{
+              padding: '8px 16px', border: 'none', borderRadius: 6, cursor: 'pointer',
+              background: activeTab === t ? 'var(--emaer-azul-principal)' : 'transparent',
+              color: activeTab === t ? '#fff' : '#666', fontWeight: 600, fontSize: 12
+            }}>{t.replace('_', ' ').toUpperCase()}</button>
+          ))}
         </div>
       </div>
 
       <div className="card">
         <div className="card-body">
-          {activeTab === 'complexidade' ? (
+          {activeTab === 'complexidade' && (
             <>
               <h3 style={{ fontSize: 14, textTransform: 'uppercase', marginBottom: 20, color: 'var(--emaer-azul-principal)' }}>MÉTODO 1 - PRECIFICAÇÃO POR M² E COMPLEXIDADE</h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 25 }}>
-                <div className="form-group">
-                  <label className="form-label">REGIÃO DA OBRA</label>
+                <div className="form-group"><label className="form-label">REGIÃO DA OBRA</label>
                   <select className="form-control" value={regiao} onChange={(e)=>setRegiao(e.target.value)}>
-                    {mediaNacional.map(m => <option key={m.regiao} value={m.regiao}>{m.regiao}</option>)}
+                    {defaultMediaNacional.map(m => <option key={m.regiao} value={m.regiao}>{m.regiao}</option>)}
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">TIPO DE OBRA</label>
-                  <select className="form-control" value={tipoObra} onChange={(e)=>setTipoObra(e.target.value)}>
-                    <option>Residencial</option>
-                    <option>Predial</option>
-                    <option>Comercial</option>
-                  </select>
+                <div className="form-group"><label className="form-label">TIPO DE OBRA</label>
+                  <select className="form-control" value={tipoObra} onChange={(e)=>setTipoObra(e.target.value)}><option>Residencial</option><option>Predial</option><option>Comercial</option></select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">ÁREA TOTAL (M²)</label>
-                  <input type="number" className="form-control" placeholder="ex: 200" value={area} onChange={(e)=>setArea(Number(e.target.value))} />
+                <div className="form-group"><label className="form-label">ÁREA TOTAL (M²)</label>
+                  <input type="number" className="form-control" value={area} onChange={(e)=>setArea(Number(e.target.value))} />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">PAVIMENTOS REPETIDOS</label>
+                <div className="form-group"><label className="form-label">PAVIMENTOS REPETIDOS</label>
                   <select className="form-control" value={repeticaoIdx} onChange={(e)=>setRepeticaoIdx(Number(e.target.value))}>
-                    {fatoresRepeticao.map((f, i) => <option key={i} value={i}>{f.desc} (x{f.fator})</option>)}
+                    {defaultFatoresRepeticao.map((f, i) => <option key={i} value={i}>{f.desc} (x{f.fator})</option>)}
                   </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">TRIBUTAÇÃO (%)</label>
-                  <input type="number" className="form-control" value={tributacao} onChange={(e)=>setTributacao(Number(e.target.value))} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">MEU PREÇO POR M²</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-                    <input type="number" className="form-control" placeholder="R$ 0,00" value={meuPrecoM2} onChange={(e)=>setMeuPrecoM2(Number(e.target.value))} />
-                    <div style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                      <div style={{ fontSize: 10, color: '#999' }}>REF. MERCADO {regiao.toUpperCase()} • {tipoObra.toUpperCase()}</div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--emaer-azul-medio)' }}>R$ {refMercado.toFixed(1).replace('.', ',')}/m²</div>
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -194,13 +161,66 @@ export default function Precificacao({ projects, setProjects }) {
                         const n = [...fatoresComplexidade]; n[i].checked = !n[i].checked; setFatoresComplexidade(n);
                       }} /> {f.label}
                     </label>
-                    <span style={{ fontSize: 12, color: '#999' }}>{f.pct}%</span>
+                    <input 
+                      type="number" 
+                      className="form-control" 
+                      style={{ width: 60, padding: 4, height: 25, fontSize: 12 }} 
+                      value={f.pct} 
+                      onChange={(e) => {
+                        const n = [...fatoresComplexidade]; n[i].pct = Number(e.target.value); setFatoresComplexidade(n);
+                      }} 
+                    />
                   </div>
                 ))}
               </div>
             </>
-          ) : (
-            <div style={{ padding: 20, textAlign: 'center' }}>Configure as horas na aba específica ou visualize o comparativo.</div>
+          )}
+
+          {activeTab === 'hora_trabalhada' && (
+            <div style={{ display: 'grid', gap: 25 }}>
+              <div>
+                <h4 style={{ fontSize: 14, color: 'var(--emaer-azul-principal)', marginBottom: 15 }}>GESTAO DA EQUIPE</h4>
+                <table style={{ width: '100%' }}>
+                  <thead><tr><th>Membro</th><th>Salário</th><th>Encargos %</th><th>Valor/Hora</th></tr></thead>
+                  <tbody>
+                    {equipe.map((m, i) => (
+                      <tr key={m.id}>
+                        <td>{m.label}</td>
+                        <td><input type="number" className="form-control" value={m.salario} onChange={(e) => {
+                          const n = [...equipe]; n[i].salario = Number(e.target.value); setEquipe(n);
+                        }} /></td>
+                        <td><input type="number" className="form-control" value={m.encargos} onChange={(e) => {
+                          const n = [...equipe]; n[i].encargos = Number(e.target.value); setEquipe(n);
+                        }} /></td>
+                        <td style={{ fontWeight: 700 }}>{fmt(calcValorHora(m))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <h4 style={{ fontSize: 14, color: 'var(--emaer-azul-principal)', marginBottom: 15 }}>CRONOGRAMA DE HORAS</h4>
+                <table style={{ width: '100%' }}>
+                  <thead><tr><th>Etapa</th><th>Responsável</th><th>Horas Estimadas</th></tr></thead>
+                  <tbody>
+                    {levantamentos.map((l, i) => (
+                      <tr key={i}>
+                        <td>{l.etapa}</td>
+                        <td><select className="form-control" value={l.responsavelId} onChange={(e) => {
+                          const n = [...levantamentos]; n[i].responsavelId = e.target.value; setLevantamentos(n);
+                        }}>
+                          <option value="">─ Selecione ─</option>
+                          {equipe.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                        </select></td>
+                        <td><input type="number" className="form-control" value={l.horas} onChange={(e) => {
+                          const n = [...levantamentos]; n[i].horas = Number(e.target.value); setLevantamentos(n);
+                        }} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           <div style={{ marginTop: 30, paddingTop: 20, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
