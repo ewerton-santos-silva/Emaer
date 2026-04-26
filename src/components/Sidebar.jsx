@@ -54,8 +54,8 @@ export default function Sidebar({ activePage, onNavigate }) {
         <div className="logo-main">EMAER</div>
         {!collapsed && (
           <>
-            <div className="logo-sub">Engenharia</div>
-            <div className="logo-accent" />
+            <div className="logo-sub" style={{ color: 'var(--emaer-red)' }}>Engenharia</div>
+            <div className="logo-accent" style={{ background: 'var(--emaer-red)' }} />
           </>
         )}
         <button

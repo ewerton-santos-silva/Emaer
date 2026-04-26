@@ -49,13 +49,20 @@ const pageComponents = {
   'indicadores':        Indicadores,
 };
 
+import { pipelineProjetosData } from './data/mockData';
+
 export default function App() {
   const [activePage, setActivePage] = useState('dashboard');
   const [pageKey, setPageKey] = useState(0);
+  const [projects, setProjects] = useState(pipelineProjetosData);
 
   const navigate = (page) => {
     setActivePage(page);
     setPageKey((k) => k + 1); // force re-mount → triggers CSS animation
+  };
+
+  const updateProjects = (newProjects) => {
+    setProjects(newProjects);
   };
 
   const config = pageConfig[activePage] || pageConfig['dashboard'];
@@ -81,7 +88,11 @@ export default function App() {
 
         {/* Page Body */}
         <div className="page-body" key={pageKey}>
-          <PageComponent onNavigate={navigate} />
+          <PageComponent 
+            onNavigate={navigate} 
+            projects={projects} 
+            setProjects={updateProjects}
+          />
         </div>
       </div>
     </div>

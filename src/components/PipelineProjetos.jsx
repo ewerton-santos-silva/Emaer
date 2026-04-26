@@ -1,70 +1,82 @@
 import { useState } from 'react';
-import { pipelineProjetosData } from '../data/mockData';
 import { formatCurrency } from './ui/Shared';
 import Modal from './ui/Modal';
 
-const colColors = {
-  'Prospecção':        '#85B7EB',
-  'Proposta Enviada':  '#EF9F27',
-  'Negociação':        '#185FA5',
-  'Contrato Assinado': '#2E9E5B',
+const colConfigs = {
+  'A PRECIFICAR':   { color: '#555',     icon: '📋' },
+  'A APRESENTAR':   { color: '#185FA5',  icon: '📺' },
+  'AGENDADA':       { color: '#2E9E5B',  icon: '📅' },
+  'NO SHOW':        { color: '#EF9F27',  icon: '👤' },
+  'NEGOCIAÇÃO':     { color: '#9c27b0',  icon: '🤝' },
+  'FORMALIZAÇÃO':   { color: '#e91e63',  icon: '📑' },
+  'FECHADA':        { color: '#4caf50',  icon: '✅' },
 };
 
-export default function PipelineProjetos() {
-  const [colunas, setColunas] = useState(pipelineProjetosData);
+export default function PipelineProjetos({ projects, setProjects }) {
   const [dragging, setDragging] = useState(null);
   const [dragOver, setDragOver] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState(null);
-  const [activeCol, setActiveCol] = useState('Prospecção');
+  const [activeCol, setActiveCol] = useState('A PRECIFICAR');
 
   const fields = [
     { name: 'nome', label: 'Nome do Projeto', type: 'text' },
     { name: 'cliente', label: 'Cliente', type: 'text' },
     { name: 'valor', label: 'Valor (R$)', type: 'number' },
+    { name: 'area', label: 'Área (m²)', type: 'number' },
   ];
 
-  const totalValor = Object.values(colunas).flat().reduce((acc, p) => acc + p.valor, 0);
+  const emPropostaCount = Object.entries(projects)
+    .filter(([col]) => col !== 'FECHADA')
+    .reduce((acc, [_, cards]) => acc + cards.length, 0);
+
+  const emPropostaValor = Object.entries(projects)
+    .filter(([col]) => col !== 'FECHADA')
+    .reduce((acc, [_, cards]) => acc + cards.reduce((s, c) => s + (c.valor || 0), 0), 0);
+
+  const fechadasCount = projects['FECHADA']?.length || 0;
+  const fechadasValor = projects['FECHADA']?.reduce((acc, c) => acc + (c.valor || 0), 0) || 0;
 
   const handleDragStart = (card, colOrigem) => setDragging({ card, colOrigem });
 
   const handleDrop = (colDestino) => {
     if (!dragging || dragging.colOrigem === colDestino) { setDragging(null); return; }
-    setColunas(prev => {
-      const next = {};
-      Object.entries(prev).forEach(([col, cards]) => {
-        if (col === dragging.colOrigem) next[col] = cards.filter(c => c.id !== dragging.card.id);
-        else if (col === colDestino)   next[col] = [...cards, dragging.card];
-        else                           next[col] = cards;
-      });
-      return next;
-    });
+    const next = { ...projects };
+    next[dragging.colOrigem] = next[dragging.colOrigem].filter(c => c.id !== dragging.card.id);
+    next[colDestino] = [...(next[colDestino] || []), dragging.card];
+    setProjects(next);
     setDragging(null);
     setDragOver(null);
   };
 
   const handleDelete = (id, col, e) => {
     e.stopPropagation();
-    setColunas(prev => ({ ...prev, [col]: prev[col].filter(c => c.id !== id) }));
+    const next = { ...projects };
+    next[col] = next[col].filter(c => c.id !== id);
+    setProjects(next);
   };
 
   const handleSave = (formData) => {
     const valorNum = parseFloat(formData.valor);
+    const areaNum = parseFloat(formData.area);
+    const next = { ...projects };
+    
     if (editingCard) {
-      setColunas(prev => {
-        const next = { ...prev };
-        const col = editingCard.col;
-        next[col] = next[col].map(c => c.id === editingCard.id ? { ...c, ...formData, valor: valorNum } : c);
-        return next;
-      });
+      next[editingCard.col] = next[editingCard.col].map(c => 
+        c.id === editingCard.id ? { ...c, ...formData, valor: valorNum, area: areaNum } : c
+      );
     } else {
       const novo = {
         id: Date.now(),
         ...formData,
-        valor: valorNum
+        valor: valorNum,
+        area: areaNum,
+        data: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
       };
-      setColunas(prev => ({ ...prev, [activeCol]: [...prev[activeCol], novo] }));
+      next[activeCol] = [...(next[activeCol] || []), novo];
     }
+    setProjects(next);
+    setIsModalOpen(false);
   };
 
   const openAdd = (col) => {
@@ -89,73 +101,85 @@ export default function PipelineProjetos() {
         fields={fields}
       />
 
-      {/* Summary bar */}
-      <div style={{
-        background: '#fff', borderRadius: 12, padding: '14px 20px', marginBottom: 22,
-        display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap',
-        boxShadow: '0 2px 8px rgba(12,68,124,0.07)',
-      }}>
-        {Object.entries(colunas).map(([col, cards]) => (
-          <div key={col} style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <div style={{ width:10, height:10, borderRadius:'50%', background:colColors[col]||'#85B7EB' }}/>
-            <span style={{ fontSize:13, color:'#444441' }}>
-              <strong>{col}:</strong> {cards.length} {cards.length === 1 ? 'projeto' : 'projetos'}
-            </span>
-          </div>
-        ))}
-        <div style={{ marginLeft:'auto', fontWeight:800, color:'#0C447C', fontSize:16 }}>
-          Pipeline Total: {formatCurrency(totalValor)}
+      {/* Summary Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 30 }}>
+        <div className="card" style={{ padding: 25, borderLeft: '5px solid var(--emaer-cyan)' }}>
+          <div style={{ fontSize: 11, color: 'var(--emaer-text-dim)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1 }}>Em Proposta</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--emaer-cyan)', margin: '5px 0' }}>{formatCurrency(emPropostaValor)}</div>
+          <div style={{ fontSize: 13, color: 'var(--emaer-text-dim)' }}>{emPropostaCount} projetos com valor</div>
+        </div>
+        <div className="card" style={{ padding: 25, borderLeft: '5px solid var(--emaer-green)' }}>
+          <div style={{ fontSize: 11, color: 'var(--emaer-text-dim)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 1 }}>Propostas Fechadas</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--emaer-green)', margin: '5px 0' }}>{formatCurrency(fechadasValor)}</div>
+          <div style={{ fontSize: 13, color: 'var(--emaer-text-dim)' }}>{fechadasCount} projetos fechados</div>
         </div>
       </div>
 
-      <div className="kanban-board">
-        {Object.entries(colunas).map(([col, cards]) => (
-          <div key={col} className="kanban-col"
-            onDragOver={e => { e.preventDefault(); setDragOver(col); }}
-            onDrop={() => handleDrop(col)}
-            style={{
-              outline: dragOver === col && dragging?.colOrigem !== col ? '2px dashed #EF9F27' : 'none',
-              borderRadius: 12
-            }}
-          >
-            <div className="kanban-col-header" style={{ background: colColors[col] || '#0C447C' }}>
-              {col}
-              <span className="kanban-col-count">{cards.length}</span>
-            </div>
-
-            <div className="kanban-cards">
-              {cards.map((card) => (
-                <div key={card.id} className="kanban-card" draggable
-                  onDragStart={() => handleDragStart(card, col)}
-                  onClick={() => openEdit(card, col)}
-                  style={{ opacity: dragging?.card.id === card.id ? 0.4 : 1, cursor: 'grab' }}
-                >
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                    <span style={{ fontSize:11, color:'#85B7EB', userSelect:'none' }}>⠿ arrastar</span>
-                    <button onClick={(e) => handleDelete(card.id, col, e)}
-                      style={{
-                        background: 'rgba(239,159,39,0.12)', border:'none', borderRadius:'50%',
-                        width:22, height:22, cursor:'pointer', color:'#EF9F27', fontWeight:700,
-                        fontSize:13, display:'flex', alignItems:'center', justifyContent:'center'
-                      }}>✕</button>
-                  </div>
-
-                  <div className="kanban-card-title">{card.nome}</div>
-                  <div className="kanban-card-meta" style={{ marginBottom:10 }}>
-                    <span>👤</span><span>{card.cliente}</span>
-                  </div>
-                  <div style={{ background:'#EBF3FB', borderRadius:8, padding:'6px 10px', fontWeight:800, color:'#0C447C', fontSize:14 }}>
-                    {formatCurrency(card.valor)}
-                  </div>
+      <div className="kanban-board" style={{ alignItems: 'flex-start' }}>
+        {Object.entries(colConfigs).map(([col, config]) => {
+          const cards = projects[col] || [];
+          return (
+            <div key={col} className="kanban-col"
+              onDragOver={e => { e.preventDefault(); setDragOver(col); }}
+              onDrop={() => handleDrop(col)}
+              style={{
+                outline: dragOver === col && dragging?.colOrigem !== col ? '2px dashed var(--emaer-red)' : 'none',
+                background: 'rgba(255,255,255,0.02)',
+                minWidth: 240
+              }}
+            >
+              <div className="kanban-col-header" style={{ borderBottom: `3px solid ${config.color}`, background: 'rgba(255,255,255,0.03)', padding: '12px 15px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14 }}>{config.icon}</span>
+                  <span style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>{col}</span>
                 </div>
-              ))}
+                <span className="kanban-col-count" style={{ background: config.color }}>{cards.length}</span>
+              </div>
 
-              <button className="btn-secondary" style={{ width:'100%', borderStyle:'dashed', padding:'10px', marginTop:10 }} onClick={() => openAdd(col)}>
-                + Novo Projeto
-              </button>
+              <div className="kanban-cards">
+                {cards.map((card) => (
+                  <div key={card.id} className="kanban-card" draggable
+                    onDragStart={() => handleDragStart(card, col)}
+                    onClick={() => openEdit(card, col)}
+                    style={{ 
+                      opacity: dragging?.card.id === card.id ? 0.4 : 1, 
+                      background: 'var(--emaer-card)',
+                      border: '1px solid var(--emaer-border)',
+                      padding: 15
+                    }}
+                  >
+                    <div className="kanban-card-title" style={{ color: '#fff', fontSize: 14, marginBottom: 5 }}>{card.nome}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--emaer-text-dim)', marginBottom: 10 }}>
+                      {card.valor > 0 ? formatCurrency(card.valor) : 'R$ —'}
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+                      <span style={{ 
+                        fontSize: 10, background: 'rgba(0,188,212,0.1)', color: 'var(--emaer-cyan)', 
+                        padding: '2px 8px', borderRadius: 4, fontWeight: 600 
+                      }}>{card.cliente}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--emaer-text-dim)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        📅 {card.data || '25/04/26'}
+                      </div>
+                      <button onClick={(e) => handleDelete(card.id, col, e)}
+                        style={{ background: 'none', border: 'none', color: 'var(--emaer-text-dim)', cursor: 'pointer', fontSize: 12 }}>✕</button>
+                    </div>
+                  </div>
+                ))}
+
+                <button className="btn-secondary" 
+                  style={{ width: '100%', border: '1px dashed var(--emaer-border)', color: 'var(--emaer-text-dim)', background: 'transparent' }} 
+                  onClick={() => openAdd(col)}
+                >
+                  + Novo Projeto
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );
